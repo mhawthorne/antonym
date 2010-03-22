@@ -1,0 +1,234 @@
+dirname = File.dirname(__FILE__)
+lib = dirname + '/lib'
+$: << lib
+
+require lib + '/antonym'
+
+
+$default_config = "etc/local.yaml"
+
+
+def fail(msg, code=1)
+  $stderr.puts msg
+  exit code
+end
+
+def get_env(name, default=nil)
+  if ENV.has_key?(name)
+    ENV[name]
+  elsif default
+    puts "using default #{name}=#{default}"
+    default
+  else
+    fail "#{name} not provided"
+  end
+end
+
+def run(cmd)
+  # secure flag allows me to run commands with passwords in them safely
+  # (especially when output is emailed via cron)
+  secure = get_env("secure", "")
+  puts cmd unless not secure.empty?
+  system cmd
+  fail "'#{cmd}' failed with status #{$?.exitstatus}" if $?.exitstatus != 0
+end
+
+
+def load_config
+  cpath = get_env("config", $default_config)
+  Antonym::Configuration.from_path(cpath)
+end
+
+
+def artifact_service
+  Antonym::ArtifactService.new(load_config(), :listener => ServiceListener.new)
+end
+
+def cron_service
+  Antonym::CronService.new(load_config(), :listener => ServiceListener.new)
+end
+
+def data_analysis_service
+  Antonym::DataAnalysisService.new(load_config(), :listener => ServiceListener.new)
+end
+
+def mixture_service
+  Antonym::MixtureService.new(load_config(), :listener => ServiceListener.new)
+end
+
+def source_service
+  Antonym::SourceService.new(load_config(), :listener => ServiceListener.new)
+end
+
+def twitter_service
+  Antonym::TwitterService.new(load_config(), :listener => ServiceListener.new)
+end
+
+
+
+class ServiceListener
+  
+  def request(uri, method)
+    puts "#{method} #{uri}"
+  end
+  
+  def response(uri, response)
+    header_str = ""
+    response.header.all.sort.each { |l| header_str << "#{l[0]}: #{l[1]}\n" }
+    puts "#{response.status} #{uri}\n#{header_str}\n#{response.content}"
+  end
+  
+end
+
+desc "loads each line in a file as an artifact"
+task :load_artifact_lines do
+  file = get_env("file")
+  src = get_env("src")
+  
+  svc = artifact_service()
+  open(file) do |stream|
+    stream.each do |line|
+      # removes trailing newlines
+      line.strip!
+      
+      artifact = { 'source' => src,
+        'content-type' => 'text/plain',
+        'body' => line }
+      svc.post(artifact)
+    end
+  end
+end
+
+desc "load artifacts from a csv file"
+task :load_artifact_csv do
+  require 'csv'
+  
+  path = get_env("path")
+  max = get_env("max", :no)
+  start = get_env("start", :no)
+  svc = artifact_service()
+  
+  max_num = max.to_i unless max == :no
+  start_num = start.to_i unless start == :no
+  open(path) do |stream|
+    count = 0
+    CSV::Reader.parse(stream) do |row|
+      count = count.next
+      if not start_num.nil? and count < start_num
+        puts "skipping #{count}"
+        next
+      end
+      
+      source = row[1]
+      body = row[2]
+      
+      a = { :source => source,
+          'content-type' => 'text/plain',
+          :body => body}
+          
+      puts "[#{count}] artifact: #{a.inspect}"
+      begin
+        svc.post(a)
+      rescue Exception => e
+        $stderr.puts e
+      end
+      
+      
+      break if max_num == count
+    end
+  end
+end
+
+desc "lists all sources"
+task :sources_list do
+  sources = source_service().list()
+  puts sources.inspect
+end
+
+desc "gets a source"
+task :source_get do
+  name = get_env("name")
+  source = source_service().get(name)
+  puts source.inspect
+end
+
+desc "deletes a source"
+task :source_delete do
+  name = get_env("name")
+  source_service().delete(name)
+end
+
+
+desc "gets an artifact"
+task :artifact_get do
+  guid = get_env("guid")
+  a = artifact_service().get(guid)
+  puts a.inspect
+end
+
+desc "obtains a random response"
+task :mix do
+  puts
+  default_source = :hi
+  source = get_env("source", default_source)
+  args = {}
+  args[:source] = source unless source == default_source
+  mix = mixture_service().get(args)
+  puts "#{mix.inspect}"
+  puts
+end
+
+desc "posts provided message to twitter"
+task :tweet_direct do
+  s = get_env("s")
+  twitter_service().direct(s)
+end
+
+desc "posts mixture to twitter"
+task :tweet_mix do
+  twitter_service().mix()
+end
+
+desc "posts mixture to twitter"
+task :twitter_act do
+  twitter_service().act()
+end
+
+task :twitter_state do
+  twitter_service().state()
+end
+
+desc "posts mixture to twitter via cron service"
+task :cron_tweet_mix do
+  cron_service().tweet_mix()
+end
+
+desc "lists data stats for kind"
+task :kind_stats do
+  kind = get_env("kind")
+  puts data_analysis_service().get(kind).inspect
+end
+
+desc "deletes all data for kind"
+task :kind_delete do
+  kind = get_env("kind")
+  sure = get_env("sure")
+  if sure
+    puts data_analysis_service().delete(kind).inspect
+  else
+    puts "are you sure you want to do this?"
+  end
+end
+
+desc "searches for artifacts"
+task :search do
+  q = get_env('q')
+  results = artifact_service().search(q)
+  if results.empty?
+    puts "no results found."
+  else
+    results.each do |a|
+      puts a.inspect
+    end
+  end
+end

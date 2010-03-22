@@ -1,0 +1,3 @@
+class Headers:
+    
+    AUTHORIZATION = "Authorization"
