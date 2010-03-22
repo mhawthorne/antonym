@@ -8,20 +8,19 @@ import twitter
 
 from antonym.accessors import MixtureAccessor
 from antonym.web.services import require_service_user
+from antonym.web import service_users
 
 from katapult.log import config as logging_config
 from katapult.requests import RequestHelper
 
 
 class TwitterConnector:
-
-    _username = 'livelock'
-    _password = '.Notsaf3'
     
     @classmethod
     def new_api(cls):
         # TODO: use memcache?
-        return twitter.Api(username=cls._username, password=cls._password, cache=None)
+        u, p = service_users.twitter_default_creds()
+        return twitter.Api(username=u, password=p, cache=None)
 
 
 class TwitterStateHandler(webapp.RequestHandler):
