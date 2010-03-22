@@ -1,0 +1,34 @@
+application: meh-antonym
+version: 1-adrenochrome
+runtime: python
+api_version: 1
+
+handlers:
+- url: /remote_api
+  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
+  login: admin
+    
+- url: /static
+  static_dir: static
+    
+- url: /_/stats.*
+  script: $PYTHON_LIB/google/appengine/ext/appstats/ui.py
+  
+- url: /cron/.*
+  script: antonym/web/cron.py
+  login: admin
+
+- url: /api/artifacts.*
+  script: antonym/web/artifacts.py  
+- url: /api/da.*
+  script: antonym/web/da.py  
+- url: /api/mixture.*
+  script: antonym/web/mixtures.py  
+- url: /api/sources.*
+  script: antonym/web/sources.py
+- url: /api/twitter.*
+  script: antonym/web/tweeter.py
+  
+- url: /(index.html)?
+  static_files: static/index.html
+  upload: /static/index.html

@@ -1,0 +1,5 @@
+cron:
+- description: auto-tweet
+  url: /cron/twitter/mix
+  schedule: every 1 hours
+  timezone: America/New_York
