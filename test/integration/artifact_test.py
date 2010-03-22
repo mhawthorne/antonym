@@ -9,7 +9,7 @@ from unittest import main, TestCase
 import httplib2
 import simplejson as json
 
-from antonym_test import helper
+from antonym_test import helper, users
 
 from katapult.core import Hashes
 
@@ -110,7 +110,8 @@ class BulkArtifactTest(TestCase):
             'content-type': 'text/plain',
             'body': helper.test_id(self) }
         body = json.dumps(artifact)
-        _create_artifact_wrapper(self, self.base_url, op, body=body, user='', passwd='')
+        user, passwd = users.default_creds()
+        _create_artifact_wrapper(self, self.base_url, op, body=body, user=user, passwd=passwd)
 
 
 class ArtifactSearchTest(TestCase):
