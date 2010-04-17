@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block page-id %}speak{% endblock %}
+
+{% block content %}
+    <p>{{ content }}</p>
+    
+    <p>sources</p>
+    <ul>
+        {% for source in sources %}
+            <li>{{ source.name }}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

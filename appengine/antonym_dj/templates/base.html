@@ -1,0 +1,66 @@
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+    xml:lang="en"
+    lang="en">
+    
+<head>
+    <title>antonym - {% block title %}abusive language.{% endblock %}</title>
+    
+    <!-- <link href="/static/default.css" type="text/css" rel="stylesheet"/> -->
+    
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript" 
+        src="http://www.google.com/jsapi?key=ABQIAAAAwykSkyvqW0UsAWKbdd4T2RSFAlky6FnuaOW2Pa3bxDSRkrDuyxS41G4DQtqLbf85LfzymHEvefRSwA"></script>
+
+    <script type="text/javascript">
+        google.load("jquery", "1.3", {uncompressed:true});
+    </script>
+    
+    {% block head-end %}
+    {% endblock %}
+</head>
+
+<body id="{% block page-id %}body{% endblock %}">
+    <div id="wrapper">
+        
+        <div id="header" class="clean-links">
+            <p class="clear"></p>
+        </div> <!-- div#header -->
+
+        {% if warnings %}
+            <div id="warnings">
+                <ul>
+                    {% for warning in warnings %}
+                        <li>{{ warning }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        <div id="debug">
+            <ul></ul>
+        </div>
+        
+        <div id="content">
+            {% block content %}
+            {% endblock %}
+        </div>
+
+        <div id="footer" class="clean-links">        
+            <p class="clear"></p>
+        </div> <!-- div#footer -->
+        
+        <div id="js-warnings">
+            <noscript>
+                <ul>
+                    <li>javascript is disabled.  please reconsider your position on this matter.</li>
+                </ul>
+            </noscript>
+        </div>
+    </div> <!-- div#wrapper -->    
+</body>
+
+</html>

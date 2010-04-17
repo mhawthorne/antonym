@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block page-id %}speak{% endblock %}
+
+{% block content %}
+    <p>{{ msg }}</p>
+    
+    <table>
+        <tr>
+            <th>source</th>
+            <th>modified</th>
+            <th>body</th>
+        </tr>
+        {% for content in contents %}
+        <tr>
+            <td>{{ content.source_name }}</td>
+            <td>{{ content.modified }}</td>
+            <td>{{ content.body }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
