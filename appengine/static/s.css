@@ -1,0 +1,52 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
+.clear {
+    clear: both;
+}
+
+.livelock {
+    color: rgb(255,0,40);
+}
+
+.user {
+    padding-left: 0.1em;
+}
+
+
+body {
+    color: rgb(60,60,60);
+}
+
+input {
+    border: 1px solid rgb(220,220,220);
+    padding: 0.2em;
+    width: 80%;
+}
+
+img {
+    margin-bottom: 1em;
+}
+
+
+div#wrapper {
+    width: 40%;
+    margin: 1em auto 1em auto;
+}
+
+div#messages {
+    height: 400px;
+    overflow: auto;
+    background: rgb(250,250,250);
+    border: 1px solid rgb(220,220,220);
+}
+
+div#messages p {
+    margin: 1em 0 1em 0;
+}
+
+div#form {
+    margin-top: 1em;
+}
