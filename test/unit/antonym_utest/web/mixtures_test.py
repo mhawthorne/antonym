@@ -8,7 +8,7 @@ import mox
 
 from katapult.mocks import Mock
 
-from antonym import mixer
+from antonym.mixer import Mixer
 from antonym.web.mixtures import MixtureHandler, MixtureResponseHandler
 from antonym.web.services import Services
 
@@ -16,9 +16,9 @@ from antonym_utest.web import new_mock_request_response
 
 
 def mixer_stub(moxer):
-    moxer.StubOutWithMock(mixer, "new_default_mixer")
-    mixer_mock = moxer.CreateMock(mixer.Mixer)
-    mixer.new_default_mixer().AndReturn(mixer_mock)
+    mixer_mock = moxer.CreateMock(Mixer)
+    moxer.StubOutWithMock(Mixer, 'new')
+    Mixer.new(mox.IgnoreArg()).AndReturn(mixer_mock)
     return mixer_mock
 
 
@@ -47,31 +47,48 @@ class MixtureHandlerTest(TestCase):
         
     def test_get_no_source(self):
         moxer, handler, mixer = self.__init()
-        mixer.mix_random_limit_sources(2).AndReturn(((Mock(name="source1"),), "hello"))
+        mixer.mix_random_limit_sources(2, degrade=True).AndReturn(((Mock(name="source1"),), "hello"))
         
         moxer.ReplayAll()
         handler.get(None)
         moxer.VerifyAll()
 
+    def test_get_q(self):
+        moxer = mox.Mox()
+        
+        request, response = new_mock_request_response(moxer)
+        handler = MixtureResponseHandler()
+        handler.initialize(request, response)
+        
+        message = "hello"
+        request.get("q", None).AndReturn(message)
+        mixer = mixer_stub(moxer)
+        mixer.mix_response(message).AndReturn(((Mock(name="source1")), "all your base are belong to us"))
+        
+        moxer.ReplayAll()
+        handler.get()
+        moxer.VerifyAll()
+
     def __init(self):
         moxer = mox.Mox()
         
-        moxer.StubOutWithMock(users, "get_current_user")
+        # moxer.StubOutWithMock(users, "get_current_user")
         
         request, response = new_mock_request_response(moxer)
         
         handler = MixtureHandler()
         handler.initialize(request, response)
-        username = Services.API_USER
-        users.get_current_user().AndReturn(Mock(email=lambda: username))
+        # username = Services.API_USER
+        # users.get_current_user().AndReturn(Mock(email=lambda: username))
         
-        # defaults to no speaker
+        # defaults to no query and speaker
         request.get("s", None).AndReturn(None)
+        request.get("q", None).AndReturn(None)
         
         return moxer, handler, mixer_stub(moxer)
 
 
-class MixtureResponseHandlerTest(TestCase):
+class _MixtureResponseHandlerTest(TestCase):
     
     def test_get_no_q(self):
         moxer = mox.Mox()

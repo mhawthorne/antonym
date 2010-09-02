@@ -8,7 +8,7 @@ from antonym.accessors import ArtifactAccessor, Counters
 from antonym.core import DuplicateDataException, IllegalArgumentException, NotFoundException
 from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource
 
-from antonym_test import helper
+from antonym_test import test_helper
 from katapult.mocks import MockEntity, MockKey, MockQuery
 
 
@@ -19,7 +19,7 @@ class ArtifactAccessorTest(unittest.TestCase):
     
     def setUp(self):
         self.moxer = mox.Mox()
-        self.test_id = helper.test_id(self)
+        self.test_id = test_helper.test_id(self)
         
     def tearDown(self):
         self.moxer.UnsetStubs()

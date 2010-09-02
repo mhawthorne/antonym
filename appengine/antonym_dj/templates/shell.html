@@ -65,18 +65,18 @@ $(document).ready(function() {
         _user(text)
         
         var successCall = function(data) {
-            _livelock(data.response)
+            _livelock(data.body)
             _count()
             input.val("")
         }
         
         var errorCall = function(request, status, e) {
-            _livelock(status)
+            _livelock("ERROR: " + request.status)
         }
         
         var options = {
             type: "GET",
-            url: "/api/mixture/response",
+            url: "/api/public/mixtures",
             data: { "q": text },
             success: successCall,
             error: errorCall,

@@ -1,11 +1,11 @@
 # http://code.activestate.com/recipes/302378/
 ## {{{ Recipe 302378 (r4): digest authentication 
 
+import logging
 import md5
 import time
 
 from katapult.http import Headers
-from katapult.log import LoggerFactory
 from katapult.requests import RequestHelper
 
 
@@ -19,7 +19,6 @@ class DigestAuth:
         realm = AuthName in httpd.conf
         users = a dict of users containing {username:password}
         """
-        self.__logger = LoggerFactory.logger(self.__class__.__name__)
         self.realm = realm
         self.users = users
         self._headers= []
@@ -36,7 +35,7 @@ class DigestAuth:
         # unspecified, then A1 is:
         # A1 = unq(username-value) ":" unq(realm-value) ":" passwd
         username = self.params["username"]
-        passwd = self.users.get(username, "")
+        passwd = self.users[username]
         return "%s:%s:%s" % (username, self.realm, passwd)
         # This is A1 if qop is set
         # A1 = H( unq(username-value) ":" unq(realm-value) ":" passwd )
@@ -60,19 +59,22 @@ class DigestAuth:
             #                              ":" unq(qop-value)
             #                              ":" H(A2)
             #                      ) <">
-            return self.KD(self.H(self.A1()), \
-                           self.params["nonce"] 
-                           + ":" + self.params["nc"]
-                           + ":" + self.params["cnonce"]
-                           + ":" + self.params["qop"]                    
-                           + ":" + self.H(self.A2()))
+            secret = self.H(self.A1())
+            data = "%s:%s:%s:%s:%s" % \
+                (self.params["nonce"], self.params["nc"], 
+                self.params["cnonce"], self.params["qop"],
+                self.H(self.A2()))
         else:
             # If the "qop" directive is not present (this construction is
             # for compatibility with RFC 2069):
             # request-digest  =
             #         <"> < KD ( H(A1), unq(nonce-value) ":" H(A2) ) > <">
-            return self.KD(self.H(self.A1()), \
-                           self.params["nonce"] + ":" + self.H(self.A2()))
+            secret = self.H(self.A1())
+            data = self.params["nonce"] + ":" + self.H(self.A2())
+                           
+        response = self.KD(secret, data)
+        # logging.debug("hashed secret:%s, data:%s into response:%s" % (secret, data, response))
+        return response
     
     def _parseHeader(self, authheader):
         try:
@@ -106,26 +108,32 @@ class DigestAuth:
           - a tuple with header info (key, value) or None
           - and the username which was authenticated or None
         """
-        self.__logger.debug("authheader: %s" % authheader)
+        # logging.debug("authheader: %s" % authheader)
+        
         self.method = method
-        self.uri = uri
+        # self.uri = uri
+        
         if authheader.strip() == "":
             self.createAuthheaer()
             return self._returnTuple(401)
         self._parseHeader(authheader)
-        self.__logger.debug("params: %s" % self.params)
+        # logging.debug("params: %s" % self.params)
         if not len(self.params):
             return self._returnTuple(400)
         # Check for required parameters
         required = ["username", "realm", "nonce", "uri", "response"]
         for k in required:
             if not self.params.has_key(k):
-                self.__logger.warn("missing param: %s" % k)
+                logging.warn("missing param: %s" % k)
                 return self._returnTuple(400)
         # If the user is unknown we can deny access right away
         user = self.params["username"]
+        
+        # using uri from auth header instead of method param
+        self.uri = self.params["uri"]
+        
         if not self.users.has_key(user):
-            self.__logger.warn("unkown user: %s" % user)
+            logging.warn("unkown user: %s" % user)
             self.createAuthheaer()
             return self._returnTuple(401)
         # If qop is sent then cnonce and cn MUST be present
@@ -139,7 +147,7 @@ class DigestAuth:
         if calculated_response == found_response:
             return self._returnTuple(200)
         else:
-            self.__logger.warn("invalid response; calculated %s, received %s" % (calculated_response, found_response))
+            logging.warn("invalid response; calculated %s, received %s" % (calculated_response, found_response))
             self.createAuthheaer()
             return self._returnTuple(401)
 ## End of recipe 302378 }}}

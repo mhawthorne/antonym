@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 import os.path
+import re
 import time
 import traceback
 
@@ -92,41 +93,10 @@ class Exceptions:
     @classmethod
     def format_last(cls):
         return traceback.format_exc()
-
-
-class Strings:
-    
-    @classmethod
-    def sanitize_encoding(cls, string):
-        # attempting to avoid "ordinal not in range" errors
-        return unicode(string).encode("utf-8")
-
-
-class Dates:
-    """ Convenience methods. """
-    
-    @classmethod
-    def format(cls, dtime):
-        return dtime.strftime("%Y.%m.%d-%H:%M:%S")
         
     @classmethod
-    def timestamp(cls):
-        return cls.format(datetime.now())
-
-    @classmethod
-    def http_timestamp(cls):
-        return format_date_time(time.mktime(datetime.now().timetuple()))
-
-    @classmethod
-    def http_timestamp_future(cls, **kw):
-        """
-        builds a http timestamp
-        
-        keywords:
-            passed directly to timedelta constructure
-        """
-        expiration = datetime.now() + timedelta(**kw)
-        return format_date_time(time.mktime(expiration.timetuple()))
+    def format(cls, exception):
+        return "%s: %s" % (exception.__class__.__name__, exception)
 
 
 class KeyCounter:
@@ -164,6 +134,9 @@ class KeyCounter:
 
     def iteritems(self):
         return self.__hash.iteritems()
+
+    def __repr__(self):
+        return repr(self.__hash)
 
 
 class Reference:

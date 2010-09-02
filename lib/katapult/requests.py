@@ -22,6 +22,25 @@ def time_request():
     return func_wrapper
 
 
+def monitor_request(**kw):
+    """ decorator that saves errors in cache """
+    always_succeed = kw.get("always_succeed", False)
+    def func_wrapper(f):
+        def args_wrapper(*args, **kw):
+            handler = args[0]
+            try:
+                return f(*args, **kw)
+            except:
+                msg = traceback.format_exc()
+                logging.error(msg)
+                if always_succeed:
+                    return False
+                else:
+                    raise
+        return args_wrapper
+    return func_wrapper
+
+
 class RequestHelper:
     
     # params:
@@ -29,12 +48,21 @@ class RequestHelper:
     def __init__(self, handler):
         self.__handler = handler
 
+    def request(self):
+        return self.__handler.request
+        
+    def response(self):
+        return self.__handler.response
+        
     def headers(self):
-        return self.__handler.request.headers
+        return self.request().headers
 
     def header(self, name, value):
-        self.__handler.response.headers[name] = value
+        self.response().headers[name] = value
 
+    def set_cookie(self, value):
+        self.response().headers.add_header("Set-Cookie", value)
+        
     def error(self, status, message=None):
         self.__handler.error(status)
         if message:
@@ -55,13 +83,13 @@ class RequestHelper:
         self.write(txt)
         
     def write(self, msg):
-        self.__handler.response.out.write("%s" % msg)
+        self.response().out.write("%s" % msg)
 
     def set_content_type(self, type):
-        self.__handler.response.headers['Content-Type'] = type
+        self.response().headers['Content-Type'] = type
        
     def set_status(self, status):
-        self.__handler.response.set_status(status)
+        self.response().set_status(status)
 
 
 class RequestTimer(object):

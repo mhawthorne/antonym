@@ -1,10 +1,12 @@
-from google.appengine.ext import webapp
+import re
+
+from google.appengine.ext import db, webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 from katapult import log
 from katapult.requests import RequestHelper
 
-from antonym.accessors import ArtifactSourceAccessor, Counters
+from antonym.accessors import ArtifactSourceAccessor, Counters, UrlResourceAccessor
 from antonym.core import NotFoundException
 from antonym.model import UrlResource
 from antonym.web.services import require_service_user
@@ -18,11 +20,6 @@ def resource_hash(resource):
     if resource.source_modified:
         h["source-modified"] = resource.source_modified.isoformat()
         
-    # artifacts = []
-    # for a in resource.artifactinfo_set:
-    #     artifacts.append(dict(guid=a.guid))
-    # if artifacts:
-    #     h["artifacts"] = artifacts
     return h
 
 
@@ -41,6 +38,36 @@ class ResourcesHandler(webapp.RequestHandler):
         helper.write_json(results)
 
 
+class ResourcesSearchHandler(webapp.RequestHandler):
+    
+    @require_service_user()
+    def get(self):
+        helper = RequestHelper(self)
+        search_results = self.__search(helper)
+        if search_results is not None:
+            helper.write_json([resource_hash(u) for u in search_results])
+
+    @require_service_user()
+    def delete(self):
+        helper = RequestHelper(self)
+        search_results = self.__search(helper)
+        if search_results:
+            keys = [u.key() for u in search_results]
+            db.delete(keys)
+            helper.write_json([k.name() for k in keys])
+        else:
+            helper.set_status(204)
+
+    def __search(self, helper):
+        q = self.request.get("q")
+        if not q:
+            helper.error(400, "q must be provided")
+            return
+
+        regex = re.compile(q)
+        return UrlResource.search_by_url(regex)
+
+
 class ResourceHandler(webapp.RequestHandler):
     
     @require_service_user()
@@ -54,6 +81,7 @@ class ResourceHandler(webapp.RequestHandler):
 
 
 application = webapp.WSGIApplication([
+    ('/api/resources/-/search', ResourcesSearchHandler),
     ('/api/resources/?(\d+)?', ResourcesHandler),
     ('/api/resources/(.+)', ResourceHandler)
     ])

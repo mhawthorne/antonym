@@ -3,7 +3,7 @@ import logging
 _format = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 
 
-def config():
+def basic_config():
     # basicConfig has no effect in appengine, but it's useful when running unit tests locally
     logging.basicConfig(level=logging.DEBUG, format=_format)
     logging.getLogger().setLevel(logging.DEBUG)
@@ -28,13 +28,13 @@ class Logger:
         logging.debug(self.__msg(msg))
     
     def info(self, msg):
-        logging.debug(self.__msg(msg))
+        logging.info(self.__msg(msg))
         
     def warn(self, msg):
-        logging.debug(self.__msg(msg))
+        logging.warn(self.__msg(msg))
         
     def error(self, msg):
-        logging.debug(self.__msg(msg))
+        logging.error(self.__msg(msg))
 
     def fatal(self, msg):
-        logging.debug(self.__msg(msg))
+        logging.fatal(self.__msg(msg))

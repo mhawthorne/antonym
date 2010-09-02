@@ -9,33 +9,35 @@ from unittest import main, TestCase
 import httplib2
 import simplejson as json
 
-from antonym_test import helper
+from antonym_test.test_helper import run_tests_from_classes
+from service_helper import PRIVATE_API_PREFIX, PUBLIC_API_PREFIX, assert_http_responses
 
 from katapult.core import Hashes
 
 
-class MixtureTest(TestCase):
+class AbstractMixturesTest(TestCase):
     
     def setUp(self):
         if not host:
             self.fail("host must be provided.")
             
-        self.base_url = "%s/api/mixture" % host
-    
-    def test_get_unauthorized(self):
-        url = self.base_url
-        helper.request_and_verify(self, 403, url, "GET")
+    def _base_url(self):
+        self.fail("not implemented")
         
-    def test_get(self):
-        url = self.base_url
-        response, content = helper.request_and_verify(self, 200, url, "GET", headers=self.__login_headers())
-        mixture_hash = json.loads(content)
-        missing = Hashes.missing_fields(mixture_hash, ('sources', 'body'))
-        if missing:
-            self.fail("missing fields: %s" % missing)
-            
-    def __login_headers(self):
-        return helper.api_login_headers()
+    def test_unauthorized(self):
+        assert_http_responses(self, self._base_url(), ("DELETE", "HEAD", "GET", "POST", "PUT"), (401, 403, 405))
+
+
+class PrivateMixturesTest(AbstractMixturesTest):
+    
+    def _base_url(self):
+        return "%s%s/mixtures" % (host, PRIVATE_API_PREFIX)
+
+
+class PublicMixturesTest(AbstractMixturesTest):
+    
+    def _base_url(self):
+        return "%s%s/mixtures" % (host, PUBLIC_API_PREFIX)
 
 
 if __name__ == '__main__':
@@ -44,4 +46,4 @@ if __name__ == '__main__':
         sys.exit(1)
 
     host = sys.argv.pop(1)
-    main()
+    run_tests_from_classes(PrivateMixturesTest, PublicMixturesTest)

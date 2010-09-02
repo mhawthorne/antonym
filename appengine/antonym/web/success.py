@@ -12,10 +12,19 @@ class SuccessHandler(webapp.RequestHandler):
         
     def post(self):
         self.__default()
+        
+    def put(self):
+        self.__default()
+        
+    def delete(self):
+        self.__default()
+
+    def head(self):
+        self.__default()
 
     def __default(self):
         helper = RequestHelper(self)
-        helper.write_json({'msg': 'hi'})
+        helper.write_json({'msg': 'hack success'})
 
 application = webapp.WSGIApplication([('/.*', SuccessHandler)])
 

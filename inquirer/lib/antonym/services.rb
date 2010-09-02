@@ -26,28 +26,124 @@ module Antonym
     end
     
     def authenticated_client(args={})
+      HttpClientFactory.new_client(@config, args)
+    end
+    
+    def build_service_uri(path)
+      "#{@config.app_uri}#{@config.app_service_prefix}#{path}"
+    end
+    
+  end
+
+
+  class HttpClientFactory
+    
+    def self.new_client(config, args={})
       client = HTTPClient.new
       type = args.fetch(:type, nil)
       if type.nil?
         type = :google
       end
       
-      #puts "authenticated_client type #{type}"
-      
       if type == :google
-        auth = Antonym::Authenticator.new(@config.app_uri, @config.app_name)
-        auth.login_client(@config.user, @config.password, client, :admin => @config.admin)
+        auth = Antonym::Authenticator.new(config.app_uri, config.app_name)
+        auth.login_client(config.user, config.password, client, :admin => config.admin)
       else
         uri = args.fetch(:uri, nil)
-        client.set_auth(uri, @config.user, @config.password)
+        client.set_auth(uri, config.user, config.password)
       end
       
-      client
+      DelegatingHttpClient.new(client, args)
     end
     
   end
+  
+  
+  class DelegatingHttpClient
+    
+    def initialize(source_client, kw={})
+      @source_client = source_client
+      @listener = kw.fetch(:listener, nil)
+    end
+    
+    [ :delete, :head, :get, :post, :put ].each do |m|
+      class_eval %{
+          def #{m}(*args)
+            # puts "args: \#\{args.inspect\}"
+            http_method = "#{m.to_s.upcase}"
+            uri = args[0]
+            if args.size > 2
+              headers = args[2]
+            else
+              headers = {}
+            end
+            # puts "\#\{http_method\} \#\{uri\}\n\#\{headers.inspect\}"
+            @listener.request(uri, http_method, headers) unless @listener.nil?
+            response = @source_client.send(:#{m}, *args)
+            @listener.response(uri, response) unless @listener.nil?
+            response
+          end
+      }
+    end
+    
+  end
+  
+  
+  class GenericService 
+  
+    include Service
+  
+    def initialize(config)
+      @config = config
+    end
 
+    def delete(path, kw={})
+      client = authenticated_client(:listener => ServiceListener.new )
+      uri = "#{@config.app_uri}#{path}"
+      response = client.delete(uri)
+      verify_response(response)
+      response
+    end
+  
+    def get(path, kw={})
+      client = authenticated_client(:listener => ServiceListener.new )
+      uri = "#{@config.app_uri}#{path}"
+      response = client.get(uri)
+      verify_response(response)
+      response
+    end
+  
+    def put(path, kw={})
+      body = kw[:body]
+      client = authenticated_client(:listener => ServiceListener.new )
+      uri = "#{@config.app_uri}#{path}"
+      response = client.put(uri, body, build_headers(kw))
+      verify_response(response)
+      response
+    end
 
+    def post(path, kw={})
+      body = kw[:body]
+      client = authenticated_client(:listener => ServiceListener.new )
+      uri = "#{@config.app_uri}#{path}"
+      response = client.post(uri, body, build_headers(kw))
+      verify_response(response)
+      response
+    end
+  
+    private
+    
+      def build_headers(kw)
+        headers = {}
+        if kw[:body].nil?
+          headers['Content-Length'] = 0
+        end
+        headers
+      end
+    
+  end
+  
+  
   class MixtureService
   
     include Service
@@ -68,8 +164,7 @@ module Antonym
 
       def svc_uri(args)
         source = args.fetch(:source, nil)
-        puts "source: #{source.inspect}"
-        raw = "#{@config.app_uri}/api/mixture"
+        raw = self.build_service_uri("/mixture")
         raw << "/#{source}" unless source.nil?
         URI.parse(raw)
       end
@@ -100,6 +195,7 @@ module Antonym
       end
       
       def post(artifact_hash)
+        puts "ArtifactService.post artifact_hash: #{artifact_hash.inspect}"
         response = new_bulk_client(:uri => svc_uri).post(svc_uri, artifact_hash.to_json())
         verify_response(response)
       end
@@ -127,10 +223,7 @@ module Antonym
         end
         
         def svc_uri(args={})
-          # most services want artifacts2, except search
-          v = args.fetch(:v, 2)
-          # using "bulk" interface to avoid captchas
-          raw = "#{@config.app_uri}/api/artifacts#{v}"
+          raw = self.build_service_uri("/artifacts")
           guid = args.fetch(:guid, nil)
           raw << "/#{guid}" unless guid.nil?
           URI.parse(raw)
@@ -174,7 +267,7 @@ module Antonym
       private
       
         def svc_uri(args={})
-          raw = "#{@config.app_uri}/api/sources"
+          raw = self.build_service_uri("/sources")
           name = args.fetch(:name, nil)
           raw << "/#{name}" unless name.nil?
           URI.parse(raw)
@@ -213,7 +306,7 @@ module Antonym
     private
 
         def svc_uri(kind)
-          raw = "#{@config.app_uri}/api/da/kinds/#{kind}"
+          raw = self.build_service_uri("/da/kinds/#{kind}")
           URI.parse(raw)
         end
 
@@ -256,9 +349,18 @@ module Antonym
       verify_response(response)
     end
 
-    def state
+    def connections
       client = authenticated_client()
-      uri = svc_uri("state")
+      uri = svc_uri("connections")
+      @listener.request(uri, "GET")
+      response = client.get(uri)
+      @listener.response(uri, response) unless @listener.nil?
+      verify_response(response)
+    end
+
+    def messages
+      client = authenticated_client()
+      uri = svc_uri("messages")
       @listener.request(uri, "GET")
       response = client.get(uri)
       @listener.response(uri, response) unless @listener.nil?
@@ -269,41 +371,39 @@ module Antonym
 
       def svc_uri(action)
         raise ServiceException.new("action required") if action.nil?
-        raw = "#{@config.app_uri}/api/twitter"
+        raw = self.build_service_uri("/twitter")
         raw << "/#{action}"
         URI.parse(raw)
       end
     
   end
-  
-  
-  class CronService
+
+
+  class FeedService
     
     include Service
-    
+  
     def initialize(config, args={})
       @config = config
-      @listener = args.fetch(:listener, nil)
+      @client = authenticated_client(args)
     end
 
-    def tweet_mix
-      client = authenticated_client()
-      uri = svc_uri("twitter/mix")
-      @listener.request(uri, "GET")
-      response = client.get(uri)
-      @listener.response(uri, response) unless @listener.nil?
-      verify_response(response)
+    def get(source)
+      return @client.get(svc_uri(:source => source))
+    end
+    
+    def put(source, feed_hash)
+      return @client.put(svc_uri(:source => source), feed_hash.to_json())
     end
     
     private
 
-      def svc_uri(action)
-        raise ServiceException.new("action required") if action.nil?
-        raw = "#{@config.app_uri}/cron"
-        raw << "/#{action}"
+      def svc_uri(args={})
+        source = args.fetch(:source, nil)
+        raw = self.build_service_uri("/feeds")
+        raw << "/#{source}" unless source.nil?
         URI.parse(raw)
       end
-    
   end
   
 end

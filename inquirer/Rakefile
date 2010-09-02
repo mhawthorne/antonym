@@ -1,3 +1,5 @@
+require 'csv'
+
 dirname = File.dirname(__FILE__)
 lib = dirname + '/lib'
 $: << lib
@@ -40,131 +42,140 @@ def load_config
 end
 
 
-def artifact_service
-  Antonym::ArtifactService.new(load_config(), :listener => ServiceListener.new)
-end
-
-def cron_service
-  Antonym::CronService.new(load_config(), :listener => ServiceListener.new)
-end
-
-def data_analysis_service
-  Antonym::DataAnalysisService.new(load_config(), :listener => ServiceListener.new)
-end
-
-def mixture_service
-  Antonym::MixtureService.new(load_config(), :listener => ServiceListener.new)
-end
-
-def source_service
-  Antonym::SourceService.new(load_config(), :listener => ServiceListener.new)
-end
-
-def twitter_service
-  Antonym::TwitterService.new(load_config(), :listener => ServiceListener.new)
-end
-
-
-
 class ServiceListener
   
-  def request(uri, method)
-    puts "#{method} #{uri}"
+  def request(uri, method, headers={})
+    puts "#{method} #{uri}\n#{headers.inspect}"
   end
   
   def response(uri, response)
     header_str = ""
     response.header.all.sort.each { |l| header_str << "#{l[0]}: #{l[1]}\n" }
+    # puts "#{response.status} #{uri}\n#{header_str}"
     puts "#{response.status} #{uri}\n#{header_str}\n#{response.content}"
   end
   
 end
 
-desc "loads each line in a file as an artifact"
-task :load_artifact_lines do
-  file = get_env("file")
-  src = get_env("src")
-  
-  svc = artifact_service()
-  open(file) do |stream|
-    stream.each do |line|
-      # removes trailing newlines
-      line.strip!
-      
-      artifact = { 'source' => src,
-        'content-type' => 'text/plain',
-        'body' => line }
-      svc.post(artifact)
-    end
-  end
+
+def default_service_args
+  { :listener => ServiceListener.new }
 end
 
-desc "load artifacts from a csv file"
-task :load_artifact_csv do
-  require 'csv'
+def artifact_service
+  Antonym::ArtifactService.new(load_config(), default_service_args())
+end
+
+def cron_service
+  Antonym::CronService.new(load_config(), default_service_args())
+end
+
+def data_analysis_service
+  Antonym::DataAnalysisService.new(load_config(), default_service_args())
+end
+
+def mixture_service
+  Antonym::MixtureService.new(load_config(), default_service_args())
+end
+
+def source_service
+  Antonym::SourceService.new(load_config(), default_service_args())
+end
+
+def twitter_service
+  Antonym::TwitterService.new(load_config(), default_service_args())
+end
+
+def feed_service
+  Antonym::FeedService.new(load_config(), default_service_args())
+end
+
+
+namespace :artifact do
   
-  path = get_env("path")
-  max = get_env("max", :no)
-  start = get_env("start", :no)
-  svc = artifact_service()
+  desc "loads each line in a file as an artifact"
+  task :import_lines do
+    file = get_env("file")
+    src = get_env("src")
   
-  max_num = max.to_i unless max == :no
-  start_num = start.to_i unless start == :no
-  open(path) do |stream|
-    count = 0
-    CSV::Reader.parse(stream) do |row|
-      count = count.next
-      if not start_num.nil? and count < start_num
-        puts "skipping #{count}"
-        next
-      end
+    svc = artifact_service()
+    open(file) do |stream|
+      stream.each do |line|
+        # removes trailing newlines
+        line.strip!
       
-      source = row[1]
-      body = row[2]
-      
-      a = { :source => source,
+        artifact = { 'source' => src,
           'content-type' => 'text/plain',
-          :body => body}
-          
-      puts "[#{count}] artifact: #{a.inspect}"
-      begin
-        svc.post(a)
-      rescue Exception => e
-        $stderr.puts e
+          'body' => line }
+        svc.post(artifact)
       end
-      
-      
-      break if max_num == count
     end
   end
+
+  desc "load artifacts from a csv file"
+  task :import_csv do
+    require 'csv'
+  
+    path = get_env("path")
+    max = get_env("max", :no)
+    start = get_env("start", :no)
+    svc = artifact_service()
+  
+    max_num = max.to_i unless max == :no
+    start_num = start.to_i unless start == :no
+    open(path) do |stream|
+      count = 0
+      CSV::Reader.parse(stream) do |row|
+        count = count.next
+        if not start_num.nil? and count < start_num
+          puts "skipping #{count}"
+          next
+        end
+      
+        # puts "row: #{row.inspect}"
+        
+        source = row[0]
+        body = row[1]
+      
+        # lack of to_s on source and body results in "stack level too deep" exception
+        a = { :source => source.to_s,
+            'content-type' => 'text/plain',
+            :body => body.to_s }
+        
+        puts "[#{count}] artifact: #{a.inspect}"
+        # puts "to_json: #{a.to_json}"
+        
+        begin
+          svc.post(a)
+        rescue Exception => e
+          $stderr.puts "#{e.class.name}: #{e}"
+          # $stderr.puts e.backtrace
+        end
+      
+        break if max_num == count
+        puts
+      end
+    end
+  end
+  
 end
 
-desc "lists all sources"
-task :sources_list do
-  sources = source_service().list()
-  puts sources.inspect
+
+task :http do
+  method = get_env('m')
+  path = get_env('p')
+  body = get_env('b', :no)
+  body = nil if body == :no
+  
+  config = load_config()
+  svc = Antonym::GenericService.new(config)
+  method_sym = method.to_sym
+  fail "unrecognized method" unless svc.respond_to?(method_sym)
+  
+  kw = { :body => body }
+  svc.send(method_sym, path, kw)
 end
 
-desc "gets a source"
-task :source_get do
-  name = get_env("name")
-  source = source_service().get(name)
-  puts source.inspect
-end
-
-desc "deletes a source"
-task :source_delete do
-  name = get_env("name")
-  source_service().delete(name)
-end
-
-
-desc "gets an artifact"
-task :artifact_get do
-  guid = get_env("guid")
-  a = artifact_service().get(guid)
-  puts a.inspect
-end
 
 desc "obtains a random response"
 task :mix do
@@ -178,29 +189,9 @@ task :mix do
   puts
 end
 
-desc "posts provided message to twitter"
-task :tweet_direct do
-  s = get_env("s")
-  twitter_service().direct(s)
-end
-
-desc "posts mixture to twitter"
-task :tweet_mix do
-  twitter_service().mix()
-end
-
 desc "posts mixture to twitter"
 task :twitter_act do
   twitter_service().act()
-end
-
-task :twitter_state do
-  twitter_service().state()
-end
-
-desc "posts mixture to twitter via cron service"
-task :cron_tweet_mix do
-  cron_service().tweet_mix()
 end
 
 desc "lists data stats for kind"
@@ -231,4 +222,47 @@ task :search do
       puts a.inspect
     end
   end
+end
+
+namespace :feed do
+  
+  desc "put a new feed"
+  task :put do
+    source_name = get_env("src")
+  
+    feed_hash = { :active => true }
+    ENV.each_pair do |k, v|
+      if k =~ /^r_(.*)/
+        feed_hash[$1] = v
+      end
+    end
+    puts feed_hash.inspect
+  
+    feed_service().put(source_name, feed_hash)
+  end
+
+  desc "load feeds from CSV"
+  task :import_csv do
+    path = get_env("path")
+    open(path) do |stream|
+      svc = feed_service()
+      CSV::Reader.parse(stream) do |row|
+        source_name = row[0]
+        feed_url = row[1]
+        active = row[2]
+        svc.put(source_name, { :url => feed_url, :active => true })
+      end
+    end
+  end
+
+end
+
+
+namespace :debug do
+  
+  task :json do
+    h = { 'msg' => 'hello' }
+    puts h.to_json
+  end
+  
 end

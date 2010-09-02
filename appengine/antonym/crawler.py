@@ -28,9 +28,11 @@ class Crawler:
                 if not href:
                     continue
                     
-                if re.match('^\/.*', href):
+                if re.match(r'^/.*', href):
                     full_href = '%s%s' % (url, href)
-                elif re.match('http:.*', href):
+                    # remove extra slashes
+                    full_href = 'http://%s' % re.sub(r'/+', '/', full_href[7:])
+                elif re.match(r'^http://.*', href):
                     full_href = href
                 else:
                     continue

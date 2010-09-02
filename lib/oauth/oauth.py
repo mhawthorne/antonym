@@ -29,7 +29,7 @@ import random
 import urlparse
 import hmac
 import binascii
-
+import logging
 
 VERSION = '1.0' # Hi Blaine!
 HTTP_METHOD = 'GET'
@@ -624,7 +624,7 @@ class OAuthSignatureMethod_HMAC_SHA1(OAuthSignatureMethod):
         """Builds the base signature string."""
         key, raw = self.build_signature_base_string(oauth_request, consumer,
             token)
-
+        # logging.debug("build_signature key:%s, raw:%s" % (key, raw))
         # HMAC object.
         try:
             import hashlib # 2.5
@@ -634,7 +634,10 @@ class OAuthSignatureMethod_HMAC_SHA1(OAuthSignatureMethod):
             hashed = hmac.new(key, raw, sha)
 
         # Calculate the digest base 64.
-        return binascii.b2a_base64(hashed.digest())[:-1]
+        digest = hashed.digest()
+        b64_digest = binascii.b2a_base64(digest)[:-1]
+        # logging.debug("build_signature digest:%s, b64_digest:%s" % (digest, b64_digest))
+        return b64_digest
 
 
 class OAuthSignatureMethod_PLAINTEXT(OAuthSignatureMethod):

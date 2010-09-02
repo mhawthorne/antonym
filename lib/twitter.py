@@ -1897,6 +1897,33 @@ class Api(object):
     self._CheckForTwitterError(data)
     return DirectMessage.NewFromJsonDict(data)
 
+  def PostRetweet(self, id):
+    '''Retweet a tweet with the Retweet API
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+    id: The numerical ID of the tweet you are retweeting
+
+    Returns:
+    A twitter.Status instance representing the retweet posted
+    '''
+    if not self._username:
+      raise TwitterError("The twitter.Api instance must be authenticated.")
+    try:
+        if int(id) <= 0:
+          raise TwitterError("'id' must be a positive number")
+    except ValueError:
+        raise TwitterError("'id' must be an integer")
+    url = 'http://api.twitter.com/1/statuses/retweet/%s.json' % id
+    json = self._FetchUrl(url, post_data={})
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return Status.NewFromJsonDict(data)
+ 
+  def __default_post_data(self):
+      return {'not_empty': 1}
+      
   def CreateFriendship(self, user):
     '''Befriends the user specified in the user parameter as the authenticating user.
 
@@ -1908,7 +1935,13 @@ class Api(object):
       A twitter.User instance representing the befriended user.
     '''
     url = 'http://twitter.com/friendships/create/%s.json' % user
+    # url = 'http://twitter.com/friendships/create.json'
+    
+    # empty dict returns http 400 when using oauth
     json = self._FetchUrl(url, post_data={})
+    # json = self._FetchUrl(url, post_data={'screen_name': user})
+    # json = self._FetchUrl(url, post_data=self.__default_post_data())
+
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return User.NewFromJsonDict(data)

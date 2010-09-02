@@ -1,12 +1,13 @@
+import logging
+
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
-from katapult import log
 from katapult.requests import RequestHelper
 
 from antonym.accessors import ArtifactSourceAccessor, Counters
 from antonym.core import NotFoundException
-from antonym.model import ArtifactSource
+from antonym.model import ArtifactInfo, ArtifactSource, Feed
 from antonym.web.services import require_service_user
 
 
@@ -17,8 +18,7 @@ def source_hash(source):
     
 class SourcesHandler(webapp.RequestHandler):
     
-    @require_service_user()
-    def get(self):
+    def get(self, **kw):
         helper = RequestHelper(self)
         results = []
         for s in ArtifactSource.all().fetch(100, 0):
@@ -28,37 +28,62 @@ class SourcesHandler(webapp.RequestHandler):
 
 class SourceHandler(webapp.RequestHandler):
     
-    @require_service_user()
-    def get(self, name):
+    def get(self, name, **kw):
         helper = RequestHelper(self)
-        source = ArtifactSource.get_by_name(name)
+        source = ArtifactSourceAccessor.get_by_name(name, return_none=True)
         if not source:
             helper.error(404)
             return
         helper.write_json(source_hash(source))
-        
-    @require_service_user()
-    def delete(self, name):
+
+    def put(self, name, **kw):
         helper = RequestHelper(self)
-        
-        # delete source
+        source = ArtifactSourceAccessor.get_by_name(name, return_none=True)
+        if source:
+            helper.set_status(409, "duplicate ArtifactSouce")
+            return
+        ArtifactSourceAccessor.create(name)
+        helper.set_status(204)
+            
+    def delete(self, name, **kw):
+        logging.debug("delete")
+        helper = RequestHelper(self)
         try:
-            ArtifactSourceAccessor.delete(name)
+            ArtifactSourceAccessor.delete_by_name(name)
             helper.set_status(204)
         except NotFoundException, ex:
             helper.error(404)
             return
 
 
-application = webapp.WSGIApplication([
-    ('/api/sources', SourcesHandler),
-    ('/api/sources/(.+)', SourceHandler)
-    ])
+class SourceCleanerHandler(webapp.RequestHandler):
+    
+    # @require_service_user()
+    def post(self, **kw):
+        helper = RequestHelper(self)
+        results = {}
+        source_q = ArtifactSource.all()
+        for s in source_q:
+            artifact_q = ArtifactInfo.find_by_source(s)
+            count = len([a for a in artifact_q])
+            counter = Counters.source_counter(s.name)
+            old_count = counter.count()
+            counter.set(count)
+            
+            source_result = { 'old': old_count }
+            
+            # if source is linked to a feed, I can't delete it
+            feed = Feed.get_by_source(s, return_none=True)
+            if feed:
+                source_result['feed'] = feed.url
 
+            if not count and not feed:
+                s.delete()
+                source_result['deleted'] = True
+            
+            if count:
+                source_result['new'] = count
+                
+            results[s.name] = source_result
+        helper.write_json(results)
 
-def main():
-  log.config()
-  run_wsgi_app(application)
-
-if __name__ == "__main__":
-  main()

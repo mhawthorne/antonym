@@ -1,39 +1,102 @@
-from google.appengine.ext import webapp
-from google.appengine.ext.webapp.util import run_wsgi_app
+import logging
+import random
+import re
+import traceback
 
+from google.appengine.api.labs import taskqueue
+from google.appengine.ext import deferred
+from google.appengine.ext import webapp
+from google.appengine.ext.webapp import util
+
+from antonym.accessors import ConfigurationAccessor
+from antonym.model import Feed
+from antonym.web.ingest import IngestWebActor
 from antonym.web.tweeter import TwitterActor
 
-from katapult.log import config as logging_config, LoggerFactory
-from katapult.requests import RequestHelper
+from katapult import dates
+from katapult.core import Exceptions
+from katapult.log import basic_config
+from katapult.requests import monitor_request, RequestHelper
 
 
-class CronTwitterMixHandler(webapp.RequestHandler):
-    
+class CronTwitterActorHandler(webapp.RequestHandler):
+
+    # in most frequent case, tweets will be 10 minutes apart
+    _minutes = xrange(5, 25)
+
     def get(self):
         helper = RequestHelper(self)
-        test = self.request.get("test")
-        if test:
-            helper.write_json(dict(test="win"))
-        else:
-            TwitterActor.mix(self)
-
-
-class CronActorHandler(webapp.RequestHandler):
-
-    def get(self):
-        # choose action
         
-        # default: find responses
-        TwitterActor.response(self)
+        # calculates random number of minutes
+        minute = random.choice(self._minutes)
+        
+        taskqueue.add(url=SafeTwitterActorHandler.PATH, countdown=minute * 60)
+        msg = 'scheduled %d minutes in the future' % minute
+        logging.debug(msg)
+        helper.write_json({'msg': msg})
+
+
+class SafeTwitterActorHandler(webapp.RequestHandler):
+    
+    PATH = '/cron/twitter/act-safe'
+    
+    def post(self):
+        try:
+            TwitterActor().act()
+            result = tuple()
+        except Exception, e:
+            msg = Exceptions.format_last()
+            logging.error(msg)
+            result = (e, msg)
+        return result
+
+
+class CronIngestDriverHandler(webapp.RequestHandler):
+    
+    _source_sanitize_regex = re.compile("[^\w-]+")
+    
+    def get(self):
+        """ enqueues all active Feeds for ingest """
+        # find all active feeds
+        q = Feed.find_active()
+        if not q.count():
+            logging.warn("no active feeds found")
+            return
+        
+        # generates unique is for task names
+        ingest_id = dates.timestamp(separator="")
+        
+        for f in q.fetch(1000):
+            try:
+                # schedule tasks to ingest by source name
+                source_name = f.artifact_source.name
+                
+                # replace invalid chars from source name
+                normalized_source_name = self._source_sanitize_regex.sub("-", source_name)
+                task_name = "ingest-%s-%s" % (normalized_source_name, ingest_id)
+                taskqueue.add(name=task_name, url="/cron/ingest/%s" % source_name)
+                logging.debug("queued ingest task %s for source '%s' (feed %s)" % (task_name, source_name, f.url))
+            except (taskqueue.TaskAlreadyExistsError, taskqueue.TombstonedTaskError):
+                logging.warn(traceback.format_exc())
+
+
+class CronIngestHandler(webapp.RequestHandler):
+    
+    # TODO: always return 200
+    def post(self, source_name):
+        IngestWebActor.ingest(self, source_name)
+
 
 application = webapp.WSGIApplication(
-    [('/cron/actor', CronActorHandler),
-    ('/cron/twitter/mix', CronTwitterMixHandler)],
+    [('/cron/twitter/act', CronTwitterActorHandler),
+    (SafeTwitterActorHandler.PATH, SafeTwitterActorHandler),
+    ('/cron/ingest', CronIngestDriverHandler),
+    ('/cron/ingest/(.+)', CronIngestHandler)],
     debug=True)
 
 def main():
-    logging_config()
-    run_wsgi_app(application)
+    basic_config()
+    util.run_wsgi_app(application)
 
 if __name__ == "__main__":
     main()

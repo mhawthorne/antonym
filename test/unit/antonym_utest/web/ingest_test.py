@@ -11,7 +11,6 @@ from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource, Feed
 from antonym.web.ingest import IngestHandler
 from antonym.web.services import Services
 
-from katapult.log import config as log_config
 from katapult.mocks import MockEntity, MockKey, MockQuery
 
 from antonym_utest.web import new_mock_request_response

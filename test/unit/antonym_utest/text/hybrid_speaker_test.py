@@ -2,15 +2,15 @@ from unittest import main, TestCase
 
 import mox
 
-from antonym.text.speakers import AbstractSpeaker, HybridSpeaker
+from antonym.text.speakers.core import SelectingSpeaker, HybridSpeaker
 
 
 class HybridSpeakerTest(TestCase):
     
     def test_ingests_for_multiple_speakers(self):
         moxer = mox.Mox()
-        s1 = moxer.CreateMock(AbstractSpeaker)
-        s2 = moxer.CreateMock(AbstractSpeaker)
+        s1 = moxer.CreateMock(SelectingSpeaker)
+        s2 = moxer.CreateMock(SelectingSpeaker)
         
         text = "hello"
         s1.ingest(text)
@@ -23,8 +23,8 @@ class HybridSpeakerTest(TestCase):
         
     def test_selects_from_first_speaker(self):
         moxer = mox.Mox()
-        s1 = moxer.CreateMock(AbstractSpeaker)
-        s2 = moxer.CreateMock(AbstractSpeaker)
+        s1 = moxer.CreateMock(SelectingSpeaker)
+        s2 = moxer.CreateMock(SelectingSpeaker)
         
         selected = ()
         s1.select(selected).AndReturn("hi")
@@ -36,8 +36,8 @@ class HybridSpeakerTest(TestCase):
         
     def test_selects_from_second_speaker(self):
         moxer = mox.Mox()
-        s1 = moxer.CreateMock(AbstractSpeaker)
-        s2 = moxer.CreateMock(AbstractSpeaker)
+        s1 = moxer.CreateMock(SelectingSpeaker)
+        s2 = moxer.CreateMock(SelectingSpeaker)
         
         selected = ()
         # s1.select() returns None, so s2.select() is called

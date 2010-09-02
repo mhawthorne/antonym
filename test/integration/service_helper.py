@@ -1,8 +1,14 @@
 import hashlib
 import hmac
+import logging
 
 import httplib2
 import simplejson as json
+
+
+PRIVATE_API_PREFIX = "/api/private"
+
+PUBLIC_API_PREFIX = "/api/public"
 
 
 def request(url, method, **kw):
@@ -29,12 +35,35 @@ def verify_response(test_case, status, response, content):
     
 def request_and_verify(test_case, status, url, method, **args):
     response, content = request(url, method, **args)
-    if response.status != status:
+    
+    error = False
+    if hasattr(status, "__getitem__"):
+        if (response.status not in status):
+            error = True
+    elif response.status != status:
+        error = True
+    
+    if error:
         test_case.fail("%s %s - expected %s - received %s %s\n%s\n%s" %
             (method, url, status, response.status, response.reason, response, content))
 
     return response, content
-    
+
+def assert_forbidden(test_case, url, method):
+    service_helper.request_and_verify(self, 403, url, method)
+
+def assert_http_responses(test_case, url, methods, statuses):
+    failed_methods = []
+    for method in methods:
+        response, _ = request(url, method)
+        if response.status not in statuses:
+            failed_methods.append((method, response.status))
+    if failed_methods:
+        test_case.fail("failed methods: %s" % failed_methods)
+
+def assert_writes_forbidden(test_case, url):
+    assert_http_responses(test_case, url, ("DELETE", "POST", "PUT"), (403, 405))
+
 def parse_json(json_string):
     try:
         return json.loads(json_string)

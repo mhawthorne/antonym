@@ -3,7 +3,7 @@ from unittest import main, TestCase
 from katapult.core import KeyCounter
 
 from antonym.core import DataException
-from antonym.text.markov import Markov2Speaker
+from antonym.text.speakers.markov import Markov2Speaker
 
 
 _text = """Operation Tractable was the final offensive conducted by Canadian Army and Polish Army troops as part of the Battle of Normandy. The goal of this operation was to capture the strategically important
@@ -40,7 +40,7 @@ class Markov2Test(TestCase):
                 errors.increment("long")
             
         failures = []
-        for k, v in errors.iterate_items():
+        for k, v in errors.iteritems():
             # fails if error occurs more than 1% of the time
             if v > run_count * .01:
                 failures.append((k, v))

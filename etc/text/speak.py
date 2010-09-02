@@ -3,18 +3,15 @@
 import csv
 import random
 import sys
+import traceback
 
-from antonym.text.markov import Markov1Speaker, Markov2Speaker
-from antonym.text.rrandom import RandomSpeaker
+from antonym.text.speakers import speaker_aliases
 from katapult.log import config as log_config
 
-
-speakers = { 'markov1': Markov1Speaker(),
-    'markov2' : Markov2Speaker(),
-    'random': RandomSpeaker() }
+speaker_calls = speaker_aliases()
 
 def speaker_list_string():
-    return ' | '.join(speakers.keys())
+    return ' | '.join(sorted(speaker_calls.keys()))
 
 log_config()
 
@@ -25,13 +22,15 @@ if len(sys.argv) < 2:
 speaker_name = sys.argv.pop(1)
 speak_count = int(sys.argv.pop()) if len(sys.argv) > 1 else 50
     
-speaker = speakers.get(speaker_name)
-if not speaker:
+speaker_call = speaker_calls.get(speaker_name, None)
+if not speaker_call:
     sys.stderr.write("ERROR - speaker '%s' not found (available: %s)\n" % (speaker_name, speaker_list_string()))
     sys.exit(2)
 
+speaker = speaker_call()
+
 for row in csv.reader(sys.stdin):
-    msg = row[2]
+    msg = row[1]
     speaker.ingest(msg)
 
 speaker.compile()
@@ -41,6 +40,10 @@ sizes = [i * 10 for i in range(12,15)]
 
 for i in range(speak_count):
     max_size = random.choice(sizes)
-    min_size = int(max_size * 0.8)
-    text = speaker.speak(min_size, max_size)
-    print "- (%d/%d) [%d] %s" % (min_size, max_size, len(text), text)
+    # min_size = int(max_size * 0.8)
+    min_size = 1
+    try:
+        text = speaker.speak(min_size, max_size)
+        print "- (%d/%d) [%d] %s" % (min_size, max_size, len(text), text)
+    except Exception, e:
+        traceback.print_exc()

@@ -14,6 +14,10 @@ from httplib2 import Http
 # http://www.imdb.com/title/tt0144084/quotes
 
 
+def encode(val):
+    return val.encode("utf-8")
+
+
 def iterate_quotes(url, names=()):
     """
     params:
@@ -30,6 +34,7 @@ def iterate_quotes(url, names=()):
     soup = BeautifulSoup(content)
     
     extras_regex = re.compile("^:\s+|\s+$", re.U | re.M)
+    name_replace_regex = re.compile(r"[\s\.]+", re.U)
     
     kw = {"class": "sodatext" }
     q_divs = soup.findAll("div", **kw)
@@ -41,20 +46,23 @@ def iterate_quotes(url, names=()):
         # need a way to detect a quote_tag with child tags
         if quote_tag:
             # print unicode(quote_tag)
-            name = extras_regex.sub("", a.string).replace(" ", ".").lower()
+            name = name_replace_regex.sub(".", extras_regex.sub("", a.string)).lower()
             quote = extras_regex.sub("", unicode(quote_tag))
-            yield (name, quote)
+            yield (encode(name), encode(quote))
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.stderr.write("ERROR - expected <url>\n")
+    if len(sys.argv) < 2:
+        sys.stderr.write("ERROR - expected <url> [source_name_override]\n")
         sys.exit(1)
     
     url = sys.argv.pop(1)
+    source_name_override = sys.argv.pop(1) if len(sys.argv) == 2 else None
     writer = csv.writer(sys.stdout)
     for q in iterate_quotes(url):
         name, quote = q
         # hack to avoid quotes with italics and other html
         if len(quote) > 5:
+            if source_name_override is not None:
+                q = (source_name_override, quote)
             writer.writerow(q)

@@ -50,10 +50,11 @@ class IngestWebActor:
             # there is no logged in user for cron requests
             user = User(Services.API_USER)
             
-        for artifact_guid, entry in model.ingest_feed_entries(f, user, error_call=error_call):
+        for artifact_guid, entry, created in model.ingest_feed_entries(f, user, error_call=error_call):
             results.append({ "artifact-guid": artifact_guid,
                 "url": entry.link,
-                "title": entry.title})
+                "title": entry.title,
+                "created": created })
             
         helper.write_json(results)
 
@@ -65,11 +66,21 @@ class IngestHandler(webapp.RequestHandler):
         IngestWebActor.ingest(self, source_name)
 
 
-application = webapp.WSGIApplication([('/api/ingest/(.+)', IngestHandler)])
+class IngestParseHandler(webapp.RequestHandler):
 
-def main():
-    log.config()
-    run_wsgi_app(application)
+    @require_service_user()
+    def get(self, feed_url):
+        feed_url = "http://%s" % feed_url
+        helper = RequestHelper(self)
+        entries = [dict(title=e.title, link=e.link, content=e.stripped_content, modified=str(e.modified)) for e in model.parse_feed_entries(feed_url)]
+        helper.write_json(entries)
 
-if __name__ == "__main__":
-    main()
+
+# application = webapp.WSGIApplication([('/api/ingest/(.+)', IngestHandler)])
+# 
+# def main():
+#     log.config()
+#     run_wsgi_app(application)
+# 
+# if __name__ == "__main__":
+#     main()

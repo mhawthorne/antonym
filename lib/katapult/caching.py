@@ -188,27 +188,16 @@ class Cache:
             action = "miss"
         cls.__log("cache decr %s %s" % (action, key))
         return result
-          
-    @classmethod
-    def hour_seconds(cls, hours):
-        return hours * 60 * 60
-
-    @classmethod
-    def minute_seconds(cls, minutes):
-        return minutes * 60
-
 
 class MemcacheQueue:
     
-    def __init__(self, name, size, **kw):
-        self.__logger = LoggerFactory.logger("queue:%s" % name)
-        self.__default_expiration = kw.get("time", 0)
+    def __init__(self, name, size=None, time=0):
+        self.__default_expiration = time
         self.__name = name
         self.__ckey_prefix = "q=%s" % name
-        self.__memcache_kw = kw
     
     def add(self, value):
-        self.__logger.debug("add %s" % value)
+        logging.debug("add %s" % str(value))
         Cache.incr(self.__max_index_key())
         ckey = self.__item_key(self.max_index())
         Cache.set(ckey, value, **self.__defaults())
@@ -217,7 +206,7 @@ class MemcacheQueue:
         item_key = self.__item_key(self.max_index())
         value = Cache.get(item_key)
         if value:
-            self.__logger.debug("remove %s" % value)
+            logging.debug("remove %s" % value)
             Cache.delete(item_key)
             Cache.decr(self.__max_index_key())
         return value
@@ -226,7 +215,7 @@ class MemcacheQueue:
         return self.__find_items(self.max_index())
         
     def clear(self):
-        self.__logger.debug("clear")
+        logging.debug("clear")
         Cache.delete(self.__max_index_key())
         Cache.delete_multi(self.__item_keys(self.max_index()))
     

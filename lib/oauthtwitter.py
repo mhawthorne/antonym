@@ -16,10 +16,11 @@ __version__ = "0.2"
 
 from twitter import Api, User
 
+import logging
 import simplejson
 import oauth.oauth as oauth
 
-
+from urllib2 import BaseHandler
 
 # Taken from oauth implementation at: http://github.com/harperreed/twitteroauth-python/tree/master
 REQUEST_TOKEN_URL = 'https://twitter.com/oauth/request_token'
@@ -28,19 +29,30 @@ AUTHORIZATION_URL = 'http://twitter.com/oauth/authorize'
 SIGNIN_URL = 'http://twitter.com/oauth/authenticate'
 
 
+class LoggingHandler(BaseHandler):
+    """ debugging handler that logs HTTP errors """
+
+    def __init__(self):
+        # ensures that this handler runs first
+        self.handler_order=0
+
+    def http_error_default(self, req, fp, code, msg, hdrs):
+        logging.debug("%s %s: %s" % (code, msg, fp.read()))
+
+
 class OAuthApi(Api):
-    def __init__(self, consumer_key, consumer_secret, access_token=None):
+    def __init__(self, consumer_key, consumer_secret, access_token=None, **kw):
         if access_token:
-            Api.__init__(self,access_token.key, access_token.secret)
+            Api.__init__(self,access_token.key, access_token.secret, **kw)
         else:
-            Api.__init__(self)
+            Api.__init__(self, **kw)
         self._Consumer = oauth.OAuthConsumer(consumer_key, consumer_secret)
         self._signature_method = oauth.OAuthSignatureMethod_HMAC_SHA1()
         self._access_token = access_token
 
 
     def _GetOpener(self):
-        opener = self._urllib.build_opener()
+        opener = self._urllib.build_opener(LoggingHandler())
         return opener
 
     def _FetchUrl(self,
@@ -72,7 +84,8 @@ class OAuthApi(Api):
         # Add key/value parameters to the query string of the url
         #url = self._BuildUrl(url, extra_params=extra_params)
     
-        if post_data:
+        has_post_data = post_data is not None
+        if has_post_data:
             http_method = "POST"
             extra_params.update(post_data)
         else:
@@ -81,20 +94,17 @@ class OAuthApi(Api):
         req = self._makeOAuthRequest(url, parameters=extra_params, 
                                                     http_method=http_method)
         self._signRequest(req, self._signature_method)
-
         
         # Get a url opener that can handle Oauth basic auth
         opener = self._GetOpener()
-        
-        #encoded_post_data = self._EncodePostData(post_data)
 
-        if post_data:
+        if has_post_data:
             encoded_post_data = req.to_postdata()
             url = req.get_normalized_http_url()
         else:
             url = req.to_url()
             encoded_post_data = ""
-            
+        
         no_cache=True
         # Open and return the URL immediately if we're not going to cache
         # OR we are posting data

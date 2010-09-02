@@ -18,10 +18,7 @@ class IngestTest(TestCase):
     self.assertEqual(len(tags), 12)
 
   def test_strip_html(self):
-    expected = """header
-title
-hello basic link
-hello numbers link"""
+    expected = """header title hello basic link hello numbers link"""
     stripped = feeds.strip_html(_default_html())
     self.assertEqual(stripped, expected)
     

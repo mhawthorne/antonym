@@ -1,6 +1,13 @@
 from katapult.core import IllegalArgumentException
 
 
+class Mock:
+    
+    def __init__(self, **kw):
+        for k, v in kw.iteritems():
+            setattr(self, k, v)
+
+
 class MockKey:
     
     def __init__(self, **kw):
@@ -28,35 +35,44 @@ class MockKey:
 
 class MockEntity:
     
-    def __init__(self, key, **kw):
-        self.__key = key
-        for k, v in kw.iteritems():
-            setattr(self, k, v)
+    def __init__(self, **kw):
+        key = kw.pop("key", None)
+        key_name = kw.pop("key_name", None)
         
-    def key(self):
-        return self.__key
+        if key:
+            key = key
+        elif key_name:
+            key = MockKey(name=key_name)
+        else:
+            raise Exception("key or key_name keyword must be provided")
+        
+        self.__mock = Mock(key=key, **kw)        
+        
+    def __getattr__(self, name):
+        return getattr(self.__mock, name)
 
     def __repr__(self):
-        return "%s(key=%s)" % (self.__class__.__name__, self.__key)
+        return "%s(key=%s)" % (self.__class__.__name__, self.key)
 
 
 class MockQuery:
     
     def __init__(self, id_range, **kw):
         create_call = kw.get("create_call", None)
+        self.__search_call = kw.get("search_call", None)
         keys_only = kw.get("keys_only", False)
         if not create_call:
             if keys_only:
                 create_call = lambda i: MockKey(id=i)
             else:
-                create_call = lambda i: MockEntity(MockKey(id=i))
+                create_call = lambda i: MockEntity(key=MockKey(id=i))
             
         # only grabs first 1000 items
         if id_range:
-            self.__items = [create_call(id) for i, id in enumerate(id_range) if i < 1000]
+            self.__set_items([create_call(id) for i, id in enumerate(id_range) if i < 1000])
         else:
-            self.__items = ()
-        self.__count = len(self.__items)
+            self.__set_items(())
+        
         
     def count(self):
         return self.__count
@@ -80,6 +96,18 @@ class MockQuery:
         else:
             result = ()
         return result
+    
+    def search(self, term):
+        if self.__search_call:
+            self.__set_items(self.__search_call(term))
+        else:
+            self.__set_items(())
+        return self
+
+    def __set_items(self, items):
+        if items is None: items = ()
+        self.__items = items
+        self.__count = len(self.__items)
         
     def __iter__(self):
         for item in self.__items:

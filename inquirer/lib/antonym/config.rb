@@ -27,15 +27,16 @@ module Antonym
       user = find_config.call("user")
       passwd = find_config.call("password")
       admin = config_hash.has_key?("admin")
-      
-      Configuration.new(app_name, URI.parse(raw_url), user, passwd, admin)
+      app_service_prefix = find_config.call("app_service_prefix")
+      Configuration.new(app_name, URI.parse(raw_url), app_service_prefix, user, passwd, admin)
     end
     
-    attr_reader :app_name, :app_uri, :user, :password, :admin
+    attr_reader :app_name, :app_uri, :app_service_prefix, :user, :password, :admin
     
-    def initialize(app_name, app_uri, user, password, admin)
+    def initialize(app_name, app_uri, app_service_prefix, user, password, admin)
       @app_name = app_name
       @app_uri = app_uri
+      @app_service_prefix = app_service_prefix
       @user = user
       @password = password
       @admin = admin

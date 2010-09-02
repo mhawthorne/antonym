@@ -2,3 +2,4 @@ appengine/antonym/web/service_users.py
 .DS_Store
 *.pyc
 .svn
+test/lib/antonym_test/users.py
