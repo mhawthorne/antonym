@@ -1,0 +1,69 @@
+09-27 02:49PM 25.298
+__mix_content body:                        
+E 09-27 02:49PM 25.305
+Traceback (most recent call last):
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/web/cron.py", line 45, in post
+    TwitterActor().act()
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/ttwitter/__init__.py", line 289, in act
+    status = self.mix()
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/ttwitter/__init__.py", line 183, in mix
+    sources, content = Mixer.new(speaker).mix_random_limit_sources(2, degrade=True)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 103, in mix_random_limit_sources
+    return self.__random_content_for_sources(sources)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 181, in __random_content_for_sources
+    return self.__mix_contents(total_contents)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 218, in __mix_contents
+    sources, raw_content = self.__mix_content(contents, **kw)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 236, in __mix_content
+    self.__speaker.ingest(body)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/text/speakers/graph.py", line 320, in ingest
+    add_words_to_nx_graph(self.__graph, phrase)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/text/speakers/graph.py", line 279, in add_words_to_nx_graph
+    head = words.pop(0)
+IndexError: pop from empty list
+
+----------------------------------------------------------------
+
+Traceback (most recent call last):
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/web/cron.py", line 45, in post
+    TwitterActor().act()
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/ttwitter/__init__.py", line 289, in act
+    status = self.mix()
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/ttwitter/__init__.py", line 183, in mix
+    sources, content = Mixer.new(speaker).mix_random_limit_sources(2, degrade=True)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 103, in mix_random_limit_sources
+    return self.__random_content_for_sources(sources)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 181, in __random_content_for_sources
+    return self.__mix_contents(total_contents)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 218, in __mix_contents
+    sources, raw_content = self.__mix_content(contents, **kw)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 237, in __mix_content
+    return sources.values(), self.__speaker.speak(min_length, max_length)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/text/speakers/graph.py", line 345, in speak
+    raise TextException("could not achieve valid ending: %s" % self.__join(words))
+TextException: <unprintable TextException object>
+
+----------------------------------------------------------------
+
+Traceback (most recent call last):
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/web/cron.py", line 45, in post
+    TwitterActor().act()
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/ttwitter/__init__.py", line 262, in act
+    direct, response = self.respond()
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/ttwitter/__init__.py", line 215, in respond
+    mention = self.__public_response(mentions)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/ttwitter/__init__.py", line 350, in __public_response
+    sources, mix = Mixer.new(speaker).mix_response(plain_tweet, min_results=1, max_length=130-len(username))
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/antonym/mixer.py", line 122, in mix_response
+    results = ArtifactAccessor.search(w)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/katapult/caching.py", line 63, in args_wrapper
+    Cache.set(key, value, **cache_kw)
+  File "/base/data/home/apps/meh-antonym/1-adrenochrome.344967867627888563/katapult/caching.py", line 142, in set
+    result = memcache.set(key, value, **kw)
+  File "/base/python_runtime/python_lib/versions/1/google/appengine/api/memcache/__init__.py", line 586, in set
+    namespace=namespace)
+  File "/base/python_runtime/python_lib/versions/1/google/appengine/api/memcache/__init__.py", line 656, in _set_with_policy
+    stored_value, flags = _validate_encode_value(value, self._do_pickle)
+  File "/base/python_runtime/python_lib/versions/1/google/appengine/api/memcache/__init__.py", line 200, in _validate_encode_value
+    'received %d bytes' % (MAX_VALUE_SIZE, len(stored_value)))
+ValueError: Values may not be more than 1000000 bytes in length; received 1131507 bytes
