@@ -6,11 +6,15 @@ import traceback
 from nltk.tokenize.punkt import PunktSentenceTokenizer
 
 from antonym.core import MissingDataException, NotImplementedException
+from antonym.text import InvalidMixtureException
 
 
 def calculate_length(words):
     # len(words) at end is for spaces
     return sum([len(w) for w in words]) + len(words)
+
+def join_words(words):
+    return " ".join(words)
 
 
 class Symbols:
@@ -19,7 +23,16 @@ class Symbols:
     END = "{end}"
 
 
-class SelectingSpeaker:
+class AbstractSpeaker:
+    
+    def ingest(self, phrase):
+        raise NotImplementedException()
+    
+    def describe(self):
+        return str(self)
+
+
+class SelectingSpeaker(AbstractSpeaker):
     """ defines speaking algorithm, delegating phrase selection to subclasses """
         
     def speak(self, min_length, max_length, **kw):
@@ -39,7 +52,7 @@ class SelectingSpeaker:
             # TODO: backtrack to last sensible ending
             # ensures that new words will not push me over max_length
             if parts_len + calculate_length(words) > max_length:
-                break
+                raise InvalidMixtureException(join_words(words))
                 
             parts.extend(words)
             
@@ -47,13 +60,10 @@ class SelectingSpeaker:
             words = None
             
             parts_len = calculate_length(parts)
-        return " ".join(parts)
+        return join_words(parts)
     
     # "abstract" methods
-    
-    def ingest(self, phrase):
-        raise NotImplementedException()
-    
+        
     def select(self, selected, min_length, max_length):
         raise NotImplementedException()
 
@@ -83,7 +93,7 @@ class HybridWordSpeaker(SelectingSpeaker):
         return result
 
 
-class HybridPhraseSpeaker:
+class HybridPhraseSpeaker(AbstractSpeaker):
     
     def __init__(self, *speakers):
         self.__speakers = speakers
@@ -97,6 +107,7 @@ class HybridPhraseSpeaker:
             s.compile()
     
     def speak(self, min_length, max_length):
+        result = None
         for s in self.__speakers:
             try:
                 result = s.speak(min_length, max_length)
@@ -104,8 +115,10 @@ class HybridPhraseSpeaker:
             except Exception, e:
                 logging.error(traceback.format_exc())
         logging.debug("used speaker: %s" % s)
+        if not result:
+            raise InvalidMixtureException("could not generate")
         return result
-    
+
     def __repr__(self):
         return "%s{%s}" % (self.__class__, self.__speakers)
 
@@ -113,19 +126,27 @@ class HybridPhraseSpeaker:
 class RandomSpeaker(SelectingSpeaker):
 
     def __init__(self):
-        self.words = set()
+        self.__words = set()
     
     def ingest(self, phrase):
-        for word in phrase.split():
-            self.words.add(word)
+        for sentence in tokenize_sentences(phrase, lowercase=True):
+            words = sentence.split()
+            for word in words:
+                self.__words.add(word)
 
     def select(self, selected, min_length, max_length):
         while True:
-            w = random.sample(self.words, 1)
+            w = random.sample(self.__words, 1)
             if w not in selected:
                 break
         return w
 
+    def describe(self):
+        return str(self)
+
+    def __str__(self):
+        return "%s(words:%d)" % (self.__class__.__name__, len(self.__words))
+        
     def compile(self):
         pass
 
@@ -135,7 +156,10 @@ _sentence_tokenizer = PunktSentenceTokenizer()
 _sentence_replace_regex = re.compile("\s+", re.DOTALL | re.UNICODE)
 _sentence_accept_regex = re.compile("\S+")
 
-def tokenize_sentences(phrase, limit=None):
+def tokenize_sentences(phrase, limit=50, transform_call=None, lowercase=False):
+    if lowercase:
+        transform_call = lambda s: s.lower()
+
     phrase = phrase.strip()
     sentences = [s for s in _sentence_tokenizer.tokenize(phrase)]
     if limit and len(sentences) >= limit:
@@ -151,7 +175,11 @@ def tokenize_sentences(phrase, limit=None):
             pass
         if _sentence_accept_regex.match(replacement):
             # logging.debug("sentence: '%s'" % replacement)
-            yield replacement
+            result = replacement
+            if transform_call:
+                result = transform_call(replacement)
+                logging.debug("transformed: '%s' -> '%s'" % (replacement, result))
+            yield result
         else:
             logging.debug("ignoring sentence: '%s'" % replacement)
 

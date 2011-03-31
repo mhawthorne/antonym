@@ -10,7 +10,7 @@ from katapult.core import KeyCounter
 
 from antonym.core import DataException, IllegalStateException, MissingDataException, NotImplementedException
 from antonym import rrandom
-from antonym.text.speakers.core import calculate_length, SelectingSpeaker, Symbols
+from antonym.text.speakers.core import calculate_length, tokenize_sentences, SelectingSpeaker, Symbols
 from antonym.text.speakers.tree import add_words_to_tree, SimpleTreeIterator, Tree
 
 
@@ -163,33 +163,33 @@ class Markov2Speaker(SelectingSpeaker):
         self.__heads_compiled = []
         
     def ingest(self, phrase):
-        phrase_words = phrase.split()
-        # phrase_words.insert(0, Symbols.START)
-        phrase_words.append(Symbols.END)
-        phrase_len = len(phrase_words)
+        for sentence in tokenize_sentences(phrase, 50, lowercase=True):
+            phrase_words = sentence.split()
+            phrase_words.append(Symbols.END)
+            phrase_len = len(phrase_words)
         
-        # phrases under 3 are of no use to a 2nd-order chain
-        if phrase_len < 3:
-            return
+            # phrases under 3 are of no use to a 2nd-order chain
+            if phrase_len < 3:
+                return
         
-        # grabs first 2 words of phrase
-        self.__heads.increment((phrase_words[0], phrase_words[1]))
+            # grabs first 2 words of phrase
+            self.__heads.increment((phrase_words[0], phrase_words[1]))
         
-        for i in range(phrase_len - 2):
-            w1 = phrase_words[i]
-            w2 = phrase_words[i + 1]
-            w3 = phrase_words[i + 2]
+            for i in range(phrase_len - 2):
+                w1 = phrase_words[i]
+                w2 = phrase_words[i + 1]
+                w3 = phrase_words[i + 2]
             
-            w_pair = (w1, w2)
-            if w_pair in self.__words:
-                trailing_words = self.__words[w_pair]
-                if w3 in trailing_words:
-                    trailing_words[w3] = trailing_words[w3] + 1
+                w_pair = (w1, w2)
+                if w_pair in self.__words:
+                    trailing_words = self.__words[w_pair]
+                    if w3 in trailing_words:
+                        trailing_words[w3] = trailing_words[w3] + 1
+                    else:
+                        trailing_words[w3] = 1
                 else:
-                    trailing_words[w3] = 1
-            else:
-                trailing_words = {w3: 1}
-                self.__words[w_pair] = trailing_words
+                    trailing_words = {w3: 1}
+                    self.__words[w_pair] = trailing_words
 
     def compile(self):
         """ converts word grid into more efficient structure """
@@ -233,8 +233,14 @@ class Markov2Speaker(SelectingSpeaker):
             pair_stats = self.__words_compiled.get(current_pair, None)
             next_word = None
             if pair_stats:
-                # stats were found for this pair
-                next_word = rrandom.select_weighted_with_replacement(pair_stats[1])
+                # ends if we're past the min length and have END as a potential next word
+                if (calculate_length(selected) > min_length) and \
+                    Symbols.END in pair_stats:
+                    next_word = None
+                else:
+                    # stats were found for this pair
+                    next_word = rrandom.select_weighted_with_replacement(pair_stats[1])
+                
             if next_word is Symbols.END: next_word = None
             return (next_word,) if next_word else None
             

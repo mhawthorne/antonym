@@ -18,6 +18,7 @@ _speaker_aliases = { 'g': lambda: GraphSpeaker(),
     'm1-t': lambda: Markov1TreeSpeaker(),
     'm2': lambda: Markov2Speaker(),
     'm2-m1': lambda: HybridWordSpeaker(Markov2Speaker(), Markov1Speaker()),
+    'm2-r': lambda: HybridPhraseSpeaker(Markov2Speaker(), RandomSpeaker()),
     'r': lambda: RandomSpeaker(),
     's': lambda: SentenceSpeaker(sentences_per_ingest=20),
     's-r': lambda: HybridPhraseSpeaker(SentenceSpeaker(sentences_per_ingest=20), RandomSpeaker()),
@@ -33,7 +34,7 @@ def new_speaker(speaker_alias='s'):
     return speaker_alias, _speaker_aliases[speaker_alias]()
 
 # TODO: is this causing our memory leak?  module caching is causing the nx graph to stay in memory?
-_speakers_weighted = (("s-r", 4), ("nx-r", 6))
+_speakers_weighted = (("s-r", 1), ("m2-r", 9))
 
 def new_random_speaker():
     return new_speaker(select_weighted_with_replacement(_speakers_weighted))

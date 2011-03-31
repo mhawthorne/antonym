@@ -27,6 +27,9 @@ class AbstractKeyedGraph:
         """
         _not_implemented()
 
+    def __iter__(self):
+        return self.iterator()
+
     def randomized_iterator(self):
         _not_implemented()
       
@@ -220,6 +223,9 @@ class NetworkXNode(AbstractKeyedGraphNode):
     def add_neighbor(self, node):
         self.__nx_graph.add_edge(self, node)
 
+    def neighbors(self):
+        return self.__nx_graph.successors(self)
+
     def set(self, **kw):
         pass
 
@@ -328,8 +334,8 @@ def add_words_to_graph(graph, phrase):
 
 def add_words_to_nx_graph(graph, phrase):
     # TODO: decide if 50 is the right choice here
-    for sentence in tokenize_sentences(phrase, 50):
-        words = phrase.split()
+    for sentence in tokenize_sentences(phrase, 50, transform_call=lambda s: s.lower()):
+        words = sentence.split()
     
         # gets "start" symbol
         start_node = graph.find_node_by_key(Symbols.START)
@@ -348,8 +354,7 @@ def add_words_to_nx_graph(graph, phrase):
             prev_node = node
 
         # adds "end" child to last word of phrase
-        prev_node.set(end=True)
-
+        # prev_node.set(end=True)
         end_node = graph.find_node_by_key(Symbols.END)
         if not end_node:
             end_node = graph.add_node(Symbols.END)
@@ -443,6 +448,13 @@ class NxGraphSpeaker:
     def compile(self):
         pass
     
+    def describe(self):
+        # return "\n".join([str(n) for n in sorted(self.__graph, key=lambda n: n.key)])
+        return "\n".join([str(self.__describe(n)) for n in sorted(self.__graph, key=lambda i: i.key)])
+    
+    def __describe(self, node):
+        return node, [n.key for n in node.neighbors()]
+        
     def speak(self, min_length, max_length):
         start_node = self.__graph.find_node_by_key(Symbols.START)
         if not start_node:
@@ -550,7 +562,7 @@ class NxGraphSelectingSpeaker(SelectingSpeaker):
     
     def __init__(self):
         self.__graph = NetworkXKeyedGraph()
-
+        
     def ingest(self, phrase):
         add_words_to_nx_graph(self.__graph, phrase)
     
