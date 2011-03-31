@@ -3,6 +3,9 @@ version: 1-adrenochrome
 runtime: python
 api_version: 1
 
+builtins:
+- datastore_admin: on
+
 handlers:
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
@@ -23,31 +26,16 @@ handlers:
 - url: /static
   static_dir: static
     
-- url: /_/stats.*
+- url: /-/stats.*
   script: $PYTHON_LIB/google/appengine/ext/appstats/ui.py
   
 - url: /cron/.*
   script: antonym/web/cron.py
   login: admin
-
-# - url: /api/artifacts.*
-#   script: antonym/web/artifacts.py
-- url: /api/config.*
-  script: antonym/web/config.py
 - url: /api/da.*
   script: antonym/web/da.py
-# - url: /api/feeds.*
-#   script: antonym/web/feeds.py
-# - url: /api/ingest.*
-#   script: antonym/web/ingest.py
-# - url: /api/mixture.*
-#   script: antonym/web/mixtures.py
 - url: /api/resources.*
   script: antonym/web/resources.py
-# - url: /api/sources.*
-#   script: antonym/web/sources.py
-- url: /api/twitter.*
-  script: antonym/web/tweeter.py
 - url: /api/.*
   script: antonym/web/urls.py
 
@@ -69,4 +57,4 @@ handlers:
 admin_console:
   pages:
       - name: Appstats
-        url: /_/stats
+        url: /-/stats

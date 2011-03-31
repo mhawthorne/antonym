@@ -39,16 +39,18 @@ def iterate_quotes(url, names=()):
     kw = {"class": "sodatext" }
     q_divs = soup.findAll("div", **kw)
     for q_div in q_divs:
-        # print q_div
+        # print "q_div:%s" % q_div
         a_tags = q_div.findAll("a")
-        a = a_tags[0]
-        quote_tag = a.parent.nextSibling
-        # need a way to detect a quote_tag with child tags
-        if quote_tag:
-            # print unicode(quote_tag)
-            name = name_replace_regex.sub(".", extras_regex.sub("", a.string)).lower()
-            quote = extras_regex.sub("", unicode(quote_tag))
-            yield (encode(name), encode(quote))
+        for a in a_tags:
+            # a = a_tags[0]
+            quote_tag = a.parent.nextSibling
+            # print "a:%s\nquote_tag:%s" % (a, quote_tag)
+            # need a way to detect a quote_tag with child tags
+            if quote_tag:
+                # print unicode(quote_tag)
+                name = name_replace_regex.sub(".", extras_regex.sub("", a.string)).lower()
+                quote = extras_regex.sub("", unicode(quote_tag))
+                yield (encode(name), encode(quote))
 
 
 if __name__ == "__main__":

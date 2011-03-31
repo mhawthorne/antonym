@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from google.appengine.ext import webapp
 
@@ -13,4 +14,5 @@ class StatusHandler(webapp.RequestHandler):
     def get(self):
         helper = RequestHelper(self)
         result = dict(twitter_api=get_full_class_name(TwitterConnector.new_api()))
+        result["sys.getdefaultencoding"] = sys.getdefaultencoding()
         helper.write_json(result)

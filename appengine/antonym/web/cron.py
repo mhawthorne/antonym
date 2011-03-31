@@ -81,8 +81,8 @@ class CronIngestDriverHandler(webapp.RequestHandler):
 
 
 class CronIngestHandler(webapp.RequestHandler):
-    
-    # TODO: always return 200
+
+    @monitor_request(always_succeed=True)
     def post(self, source_name):
         IngestWebActor.ingest(self, source_name)
 

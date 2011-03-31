@@ -2,7 +2,9 @@
 
 import logging
 import sys
+from StringIO import StringIO
 from unittest import TestLoader, TestSuite, TextTestRunner
+
 
 def fail(msg, code=1):
     sys.stderr.write("ERROR - %s\n" % msg)
@@ -33,4 +35,3 @@ logging.basicConfig(level=logging.DEBUG)
 
 suite = TestSuite(tests)
 TextTestRunner(verbosity=2).run(suite)
-    

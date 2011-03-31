@@ -3,7 +3,7 @@ import logging
 
 from google.appengine.ext import webapp
 
-from katapult.caching import MemcacheQueue
+from katapult.caching.queue import MemcacheQueue
 from katapult.dates import timestamp
 from katapult.requests import RequestHelper
 

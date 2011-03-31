@@ -1,7 +1,6 @@
 import logging
 
 from google.appengine.ext import webapp
-from google.appengine.ext.webapp.util import run_wsgi_app
 
 from katapult.models import entity_has_property, entity_to_hash
 from katapult.requests import RequestHelper
@@ -16,7 +15,7 @@ class ConfigHandler(webapp.RequestHandler):
     @require_service_user()
     def get(self, key):
         helper = RequestHelper(self)
-        config = ConfigurationAccessor.get()
+        config = ConfigurationAccessor.get_or_create()
         result = None
         if config:
             if key:
@@ -50,17 +49,5 @@ class ConfigHandler(webapp.RequestHandler):
     @require_service_user()
     def delete(self, key):
         helper = RequestHelper(self)
-        ConfigurationAccessor.update(key=None)
+        ConfigurationAccessor.update(**{key: None})
         helper.set_status(204)
-
-
-application = webapp.WSGIApplication([
-    ('/api/config/?([^/]+)?', ConfigHandler)])
-
-
-def main():
-    logging.basicConfig(level=logging.DEBUG)
-    run_wsgi_app(application)
-
-if __name__ == "__main__":
-    main()

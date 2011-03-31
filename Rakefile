@@ -2,7 +2,7 @@ $default_host = "http://localhost:9009"
 $appengine_dir = 'appengine'
 $gae_home_default = "#{ENV['HOME']}/opt/google_appengine"
 
-ADMIN_EMAIL = 'mhawthorne@gmail.com'
+ADMIN_EMAIL = 'meh.subterfusion@gmail.com'
 APPENGINE_DIR = 'appengine'
 APP_ID = 'meh-antonym'
 DATA_EXPORT_DIR = 'tmp/backup'
@@ -10,6 +10,9 @@ PASSWD_FILE = 'tmp/passwd'
 
 $fileutils = FileUtils::Verbose
 
+def flag_is_false(val)
+  return val == "no"
+end
 
 def fail(msg, code=1)
   $stderr.puts msg
@@ -31,7 +34,7 @@ def run(cmd)
   # secure flag allows me to run commands with passwords in them safely
   # (especially when output is emailed via cron)
   secure = get_env("secure", "")
-  puts cmd unless not secure.empty?
+  puts "=> #{cmd}" unless not secure.empty?
   system cmd
   fail "'#{cmd}' failed with status #{$?.exitstatus}" if $?.exitstatus != 0
 end
@@ -77,6 +80,9 @@ desc "copies library files"
 task :lib_copy do
   each_lib() do |lib|
     $lib_destinations.each do |d|
+      lib_basename = File.basename(lib)
+      rm_path = "#{d}/#{lib_basename}"
+      $fileutils.rm_r rm_path if File.exists?(rm_path)
       $fileutils.cp_r lib, d
     end
   end
@@ -113,14 +119,35 @@ desc "runs all tests"
 task :test => [:test_unit, :test_integration]
 
 
+def load_test_modules(test_dir, test_suffix)
+  test_modules = []
+  test_files = load_tests(test_dir, test_suffix)
+  test_files.each do |test_file|
+    test_module = test_file[test_dir.size+1..-4].gsub(/\//, ".")
+    test_modules << test_module
+  end
+  test_modules
+end
+
 namespace :test do
   
   desc "runs unit tests"
   task :u => [:clean] do
-    cmd_prefix = "#{gae_python_path_string()}:#{test_lib()}:test/unit && python2.5"
-    tests = load_tests("test/unit", "*_test.py")
-    tests.each do |test|
-      run "#{cmd_prefix} #{test} -v"
+    use_coverage = get_env("coverage", :no)
+    open = get_env("open", :no)
+    
+    test_dir = "test/unit"
+    cmd_prefix = "#{gae_python_path_string()}:#{test_lib()}:#{test_dir} && python2.5 "
+    cmd_prefix << coverage_prefix() unless use_coverage == :no
+    
+    test_modules = load_test_modules(test_dir, "*_test.py")
+    joined_test_modules = test_modules.join(" ")
+    run "#{cmd_prefix} test/runner.py #{joined_test_modules}"
+    unless use_coverage == :no
+      run "coverage html"
+      unless open == :no
+        run "open htmlcov/index.html"
+      end
     end
   end
 
@@ -128,13 +155,25 @@ namespace :test do
   task :i => [:clean] do
     host = get_env("host", $default_host)
   
-    cmd_prefix = "export PYTHONPATH=#{$lib_dir}:#{test_lib()} && python2.5"
-    tests = load_tests("test/integration", "*_test.py")
+    test_dir = "test/integration"
+    cmd_prefix = "export PYTHONPATH=#{$lib_dir}:#{test_lib()}:#{test_dir} && python2.5"
+    
+    # test_modules = load_test_modules(test_dir, "*_test.py")
+    # joined_test_modules = test_modules.join(" ")
+    # run "#{cmd_prefix} test/runner.py #{joined_test_modules} - #{host}"
+    
+    tests = load_tests(test_dir, "*_test.py")
     tests.each do |test|
-      run "#{cmd_prefix} #{test} #{host} -v"
+      run "#{cmd_prefix} #{test} #{host}"
     end
   end
 
+end
+
+def coverage_prefix
+  coverage_bin = `which coverage`.strip
+  fail "coverage.py not found" if coverage_bin.empty?
+  "#{coverage_bin} run --source=\"katapult,antonym\""
 end
 
 desc "runs appengine locally"
@@ -143,11 +182,10 @@ task :run_app => [ :lib_copy ] do
   args = get_env("args", "")
   coverage = get_env("coverage", :no)
   gserver = "#{locate_gae()}/dev_appserver.py"
-  coverage_bin = `which coverage`.strip
+  
   
   cmd = "/usr/bin/python2.5 "
-  # puts "coverage: #{coverage}"
-  cmd << "#{coverage_bin} run " if coverage != :no
+  cmd << coverage_prefix unless coverage == :no
   cmd << "#{gserver} -p #{port} --show_mail_body #{args} #{$appengine_dir} 2>&1 | tee tmp/gae.log"
   run cmd
 end
@@ -161,7 +199,7 @@ end
 
 desc "deploys application to appengine"
 task :deploy => [ :lib_copy ] do
-  default_login = "not-provided"
+  default_login = :y
   login = get_env("login", default_login)
   
   appcfg_bin = "appcfg.py"
@@ -170,15 +208,15 @@ task :deploy => [ :lib_copy ] do
   fail "#{appcfg_bin} not found" if appcfg.empty?
   
   cmd = ""
-  use_login = (login != default_login)
+  use_login = (login == default_login)
   if use_login
     Rake::Task["verify_passwd"].execute
-    passwd = get_passwd()
-    cmd << "echo #{passwd} | "
+    cmd << "cat #{PASSWD_FILE} | "
   end
   
   cmd << "python2.5 #{appcfg} "
-  cmd << "--passin " if use_login
+  cmd << "--passin " if use_login  
+  cmd << "--email=#{ADMIN_EMAIL} "
   cmd << "update #{$appengine_dir}"
   run cmd
 end
@@ -201,11 +239,9 @@ def build_dump_cmd(host, kind, dir, keywords={})
   "#{APPENGINE_DIR}"
 end
 
-def build_restore_cmd(host, kind, dir, keywords={})
-  file = "#{dir}/#{kind}.sql3"
-
+def build_restore_cmd(host, kind, path, keywords={})
   "cat #{PASSWD_FILE} | "  <<
-  "python2.5 #{locate_gae()}/bulkloader.py --restore --kind=#{kind} --filename=#{file} " <<
+  "python2.5 #{locate_gae()}/bulkloader.py --restore --kind=#{kind} --filename=#{path} " <<
   "--url=#{host}/remote_api --email=#{ADMIN_EMAIL} --app_id=#{APP_ID} --passin " <<
   "#{APPENGINE_DIR}"
 end
@@ -213,6 +249,12 @@ end
 
 desc "deletes all derived files"
 task :clean do
+  clean = get_env("clean", :yes)
+  if flag_is_false(clean)
+    puts "skipping clean"
+    next
+  end
+  
   [ 'appengine', 'lib', 'test' ].each do |d|
     glob = "#{d}/**/*.pyc"
     puts "cleaning #{glob}"
@@ -233,12 +275,17 @@ namespace :svn do
 end
 
 
-backup_kinds = [ 'TwitterResponse' ]
+backup_kinds = [ 'Configuration', 'Feed', 'TwitterResponse' ]
 
 
 namespace :restore do
 
+  desc "restores backup for specified kind"
   task :kind do
+    host = get_env("host", $default_host)
+    kind = get_env("kind")
+    path = get_env("path")
+    run build_restore_cmd(host, kind, path)
   end
 
 end
@@ -253,10 +300,18 @@ namespace :backup do
   desc "backs up all data of specified kinds"
   task :download => [ :verify_passwd ] do
     host = get_env("host", $default_host)
+    kind = get_env("kind", :default)
     
     dated_export_dir = create_dated_export_dir()
 
-    backup_kinds.each do |k|
+    kinds = []
+    if kind != :default
+      kinds << kind
+    else
+      kinds.concat(backup_kinds)
+    end
+    
+    kinds.each do |k|
       run build_dump_cmd(host, k, dated_export_dir)
     end
   end

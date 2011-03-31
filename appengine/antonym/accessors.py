@@ -5,13 +5,13 @@ from google.appengine.ext import db
 
 import simplejson as json
 
-from antonym.core import DataException, DuplicateDataException, IllegalArgumentException, MissingDataException, NotFoundException
+from antonym.core import ConflictingDataException, DataException, DuplicateDataException,\
+    IllegalArgumentException, MissingDataException, NotFoundException
 from antonym.text.rewriting import RegexRewriter
 from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource, Configuration, Feed, TwitterResponse, UrlResource
 
 from katapult.accessors.counters import Counter
-from katapult import caching
-from katapult.caching import Cache
+from katapult.caching import decorators as caching
 from katapult.log import LoggerFactory
 from katapult.models import Models
 
@@ -103,6 +103,11 @@ class ArtifactAccessor:
         hasher.update("%s;%s;%r" % (source_name, content_type, body))
         return hasher.hexdigest()
     
+    @classmethod
+    @caching.cache_return_by_argument_key(lambda *args, **kw: "artifact:content:%s" % args[1])
+    def get_content_by_guid(cls, guid):
+        return ArtifactContent.get_by_guid(guid)
+        
     @classmethod
     def find_or_create(cls, **kw):
         """
@@ -197,7 +202,6 @@ class ArtifactAccessor:
                 
         return a_info_key, a_content_key, source_key
         
-        
     @classmethod
     def delete(cls, guid):
         logger = LoggerFactory.logger(cls.__name__)
@@ -221,9 +225,11 @@ class ArtifactAccessor:
         # decrease source counter
         Counters.source_counter(a_info.source.name).decrement()
 
+    # NOTE: when max_results was 100, I occassionally get a "too large" exception since the value to cache was over 1M.
+    
     @classmethod
     @caching.cache_return_by_argument_key(lambda *args, **kw: "artifact-search;term=%s" % args[1])
-    def search(cls, term, max_results=100):
+    def search(cls, term, max_results=50):
         # TODO: tweak result limit
         return [c for c in ArtifactContent.all().search(term).fetch(max_results)]
 
@@ -254,8 +260,8 @@ class ConfigurationAccessor:
 
     @classmethod
     @caching.cache_return_by_argument_key(lambda *args: _config_cache_key)
-    def get(cls):
-        return Configuration.get()
+    def get_or_create(cls):
+        return Configuration.get_or_create()
         
     @classmethod
     @caching.cache_delete_by_argument_key(lambda *args, **kw: _config_cache_key)

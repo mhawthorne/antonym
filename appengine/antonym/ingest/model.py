@@ -7,17 +7,13 @@ from antonym.accessors import ArtifactAccessor, UrlResourceAccessor
 from antonym.ingest import feeds
 
 
-def parse_feed_entries(url):
-    for entry in feeds.generate_feed_entries(url):
-        yield entry
-
 def ingest_feed_entries(feed, user, error_call=None):
     """
     yields:
         (artifact guid, entry) tuple
     """
     # TODO: use etag from previous ingest
-    for entry in parse_feed_entries(feed.url):
+    for entry in feeds.generate_feed_entries(feed.url):
         try:
             stripped_content = entry.get("stripped_content")
             if stripped_content:

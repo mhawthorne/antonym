@@ -37,6 +37,7 @@ class IngestTest(TestCase):
         self.assert_(e.has('title'), "missing: title")
         self.assert_(e.has('etag'), "missing: etag")
         self.assert_(e.has('modified'), "missing: modified")
+        print "modified: %s" % e.modified
         self.assert_(e.has('link'), "missing: link")
 
         # TODO: verify no HTML in stripped content

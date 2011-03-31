@@ -6,14 +6,14 @@ import sys
 import traceback
 
 from antonym.text.speakers import speaker_aliases
-from katapult.log import config as log_config
+from katapult.log import basic_config
 
 speaker_calls = speaker_aliases()
 
 def speaker_list_string():
     return ' | '.join(sorted(speaker_calls.keys()))
 
-log_config()
+basic_config()
 
 if len(sys.argv) < 2:
     sys.stderr.write('ERROR - expected <speaker> [count] (%s)\n' % speaker_list_string())
@@ -38,12 +38,16 @@ speaker.compile()
 
 sizes = [i * 10 for i in range(12,15)]
 
+successes = 0
 for i in range(speak_count):
     max_size = random.choice(sizes)
-    # min_size = int(max_size * 0.8)
-    min_size = 1
+    min_size = int(max_size * 0.5)
+    # min_size = 1
     try:
         text = speaker.speak(min_size, max_size)
         print "- (%d/%d) [%d] %s" % (min_size, max_size, len(text), text)
+        successes += 1
     except Exception, e:
         traceback.print_exc()
+        
+print "%d/%d successes (%.1f%%)" % (successes, speak_count, float(successes)/speak_count * 100)

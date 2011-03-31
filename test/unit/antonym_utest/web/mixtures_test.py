@@ -17,8 +17,13 @@ from antonym_utest.web import new_mock_request_response
 
 def mixer_stub(moxer):
     mixer_mock = moxer.CreateMock(Mixer)
-    moxer.StubOutWithMock(Mixer, 'new')
-    Mixer.new(mox.IgnoreArg()).AndReturn(mixer_mock)
+
+    # moxer.StubOutWithMock(Mixer, '__init__')
+    # Mixer.__init__(mox.IgnoreArg())
+    
+    moxer.StubOutWithMock(Mixer, '__new__')
+    Mixer.__new__(Mixer, mox.IgnoreArg()).AndReturn(mixer_mock)
+    
     return mixer_mock
 
 

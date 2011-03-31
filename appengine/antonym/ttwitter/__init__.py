@@ -8,8 +8,9 @@ import twitter
 
 from antonym import rrandom
 from antonym.accessors import ConfigurationAccessor, TwitterResponseAccessor
-from antonym.core import AppException, IllegalStateException
+from antonym.core import AppException, DataException, IllegalStateException
 from antonym.mixer import Mixer
+from antonym.model import TwitterResponse
 from antonym.text.speakers import new_random_speaker
 from antonym.text.speakers.core import SentenceSpeaker
 from antonym.text.speakers.graph import NxGraphSpeaker
@@ -40,7 +41,7 @@ def sorted_user_list(users):
     return sorted(users, key=lambda u: u['screen-name'])
 
 def new_default_mixer():
-    return Mixer.new(new_speaker())
+    return Mixer(new_speaker())
 
 def describe_status(status):
     return "%s: %s" % (status.user.screen_name, status.text)
@@ -48,7 +49,8 @@ def describe_status(status):
 
 class ReadOnlyTwitterApi:
 
-    __supported_methods = set(["GetDirectMessages", "GetFollowers", "GetFriends", "GetFriendsTimeline", "GetReplies"])
+    __supported_methods = set(["FetchPath", "GetDirectMessages", "GetFollowers", "GetFriends",
+        "GetFriendsTimeline", "GetReplies", "GetUser"])
     
     def __init__(self, delegate=None):
         self.__d = delegate or TwitterConnector.new_api()
@@ -87,18 +89,19 @@ class TwitterConnector:
     
     @classmethod
     def new_api(cls):
-        config = ConfigurationAccessor.get()
+        config = ConfigurationAccessor.get_or_create()
         if config and config.twitter_oauth_enabled and config.twitter_access_token:
             logging.debug("creating OAuth API instance")
             api = cls._new_oauth_api(OAuthToken.from_string(config.twitter_access_token))
-            if config.twitter_read_only:
-                logging.debug("creating read-only Twitter API")
-                api = ReadOnlyTwitterApi(api)
-            return api
         else:
             logging.debug("creating basic API instance")
-            return cls._new_basic_api()
-        
+            api = cls._new_basic_api()
+
+        if safe_int(config.twitter_read_only):
+            logging.debug("creating read-only Twitter API")
+            api = ReadOnlyTwitterApi(api)
+        return api
+
     @classmethod
     def _new_basic_api(cls):
         # TODO: use memcache?
@@ -136,7 +139,7 @@ class ActionSelector:
     # this is used to select what to do at a given time
     # do stuff from 7am-12am EST = 11am-4am UTC
     # relax from 12am-7am EST = 4am-11am UTC
-    _active_weights = [(True, 5), (False, 5)]
+    _active_weights = [(True, 2), (False, 8)]
     _passive_weights = [(True, 1), (False, 9)]
         
     # maps time of day to weights
@@ -145,7 +148,7 @@ class ActionSelector:
         xrange(11,24): _active_weights }
 
     # weighted probabilities of actions to perform if there is nothing to respond to
-    _actions_weighted = [(RANDOM_TWEET,8), (RETWEET,2)]
+    _actions_weighted = [(RANDOM_TWEET,6), (RETWEET,4)]
 
     def should_act(self):
         now = datetime.utcnow()
@@ -167,11 +170,11 @@ class TwitterActor(object):
     
     MASTER_USERNAME = "mhawthorne"
     
-    def __init__(self, selector=None, twitter_api=None, reporter=None):
+    def __init__(self, selector=None, twitter_api=None, reporter=None, analyzer=None):
         self.__selector = selector or ActionSelector()
         self.__twitter = twitter_api or TwitterConnector.new_api()
         self.__reporter = reporter or ActivityReporter()
-        self.__analyzer = TweetAnalyzer()
+        self.__analyzer = analyzer or TweetAnalyzer()
 
     def __select_speaker(self):
         speaker_name, speaker = new_random_speaker()
@@ -184,7 +187,7 @@ class TwitterActor(object):
             twitter.Status
         """
         speaker = self.__select_speaker()
-        sources, content = Mixer.new(speaker).mix_random_limit_sources(2, degrade=True)
+        sources, content = Mixer(speaker).mix_random_limit_sources(2, degrade=True)
         logging.debug("mixing random tweet: {%s} %s" % (";".join([s.name for s in sources]), content))
         self.__reporter.posted(content)
         return self.__twitter.PostUpdate(content)
@@ -223,29 +226,41 @@ class TwitterActor(object):
         return direct, mention
 
     def retweet(self):
-        # loads all statuses into map so I can remove them if I've already retweeted
-        statuses = {}
-        for status in self.__twitter.GetFriendsTimeline(count=10):
-            statuses[status.id] = status
+        statuses = self.__twitter.GetFriendsTimeline(count=10)
 
-        while statuses:
-            _, retweet_source = statuses.popitem()
+        retweet_source = None
+        for candidate in statuses:
+            logging.debug("candidate: %s" % candidate)
             
             # TODO: should query for type=retweet
             # otherwise I may retweet a mention
             
             # checks if status has been retweeted
-            response = TwitterResponseAccessor.get_by_message_id(str(retweet_source.id))
+            response = TwitterResponseAccessor.get_by_message_id(str(candidate.id))
             
             # if msg was already retweeted, removed from set and let loop continue
             if not response:
+                logging.debug("not previously retweeted: %s" % candidate.id)
+                retweet_source = candidate
+            else:
+                logging.debug("found retweet for message %s" % response.message_id)
+                continue
+                
+            if self.__analyzer.should_retweet(candidate):
+                retweet_source = candidate
                 break
             else:
-                logging.debug("found retweet for message %s" % response.id)
-                
+                logging.debug("not retweeting: %s" % describe_status(candidate))
+            
+        if not retweet_source:
+            raise DataException("could not find anything to retweet")
+            
         pretty_retweet = describe_status(retweet_source)
         logging.debug("retweeting '%s'" % pretty_retweet)
-        self.__twitter.PostRetweet(retweet_source.id)
+        retweet = self.__twitter.PostRetweet(retweet_source.id)
+        # stores retweet
+        TwitterResponseAccessor.create(str(retweet_source.id), response_id=str(retweet.id),
+            tweet_type=TwitterResponse.RETWEET, user=retweet_source.user.screen_name)
         self.__reporter.retweeted(pretty_retweet)
         return retweet_source, pretty_retweet
         
@@ -255,7 +270,7 @@ class TwitterActor(object):
             (action, response) tuple.  response type depends on the action that was performed.
         """        
         if not force_act:
-            config = ConfigurationAccessor.get()
+            config = ConfigurationAccessor.get_or_create()
             if config and (config.is_tweeting is not None) and (not safe_int(config.is_tweeting)):
                 logging.debug("config.is_tweeting is False; hiding")
                 return ()
@@ -319,7 +334,7 @@ class TwitterActor(object):
         sent_message = None
         if direct:
             speaker = self.__select_speaker()
-            sources, response_text = Mixer.new(speaker).mix_response(direct.text, min_results=1)
+            sources, response_text = Mixer(speaker).mix_response(direct.text, min_results=1)
             logging.info("responding to direct message %s %s" % (direct.id, response_text))
             sent_message = self.__twitter.PostDirectMessage(direct.sender_screen_name, response_text)
             self.__reporter.posted(response_text)
@@ -335,7 +350,7 @@ class TwitterActor(object):
             logging.info("found public message: %s" % pretty_message)
             if not self.__analyzer.should_respond(m):
                 logging.info("not responding")
-                break
+                continue
                 
             response = TwitterResponseAccessor.get_by_message_id(str(m.id))
             if not response:
@@ -351,12 +366,12 @@ class TwitterActor(object):
             parsed_tweet = parse_tweet(message.text)
             plain_tweet = parsed_tweet.plain_text
             speaker = self.__select_speaker()
-            sources, mix = Mixer.new(speaker).mix_response(plain_tweet, min_results=1, max_length=130-len(username))
+            sources, mix = Mixer(speaker).mix_response(plain_tweet, min_results=1, max_length=130-len(username))
             response_text = "@%s %s" % (username, mix)
             logging.info("responding to public message %s: %s" % (message.id, response_text))
             
             sent_message = self.__twitter.PostUpdate(response_text, message.id)
-            TwitterResponseAccessor.create(str(message.id), response_id=str(sent_message.id), user=username) 
+            TwitterResponseAccessor.create(str(message.id), response_id=str(sent_message.id), user=username, tweet_type=TwitterResponse.MENTION) 
             self.__reporter.posted(response_text)
 
         return sent_message
@@ -391,3 +406,9 @@ class TweetAnalyzer:
         """
         return not self.NO_RESPONSE_REGEX.match(message.text)
     
+    def should_retweet(self, message):
+        """
+        returns:
+            True or False
+        """
+        return not self.NO_RESPONSE_REGEX.match(message.text)

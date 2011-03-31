@@ -147,9 +147,13 @@ namespace :artifact do
         
         begin
           svc.post(a)
-        rescue Exception => e
+        rescue Antonym::ServiceException => e
           $stderr.puts "#{e.class.name}: #{e}"
-          # $stderr.puts e.backtrace
+          if e.code == 409
+            next
+          else
+            break
+          end
         end
       
         break if max_num == count

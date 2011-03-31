@@ -11,13 +11,14 @@ from katapult.mocks import MockEntity, MockQuery
 from antonym.accessors import ArtifactAccessor
 from antonym.model import ArtifactContent, ArtifactSource, UrlResource
 from antonym.mixer import Mixer
-from antonym.text.speakers import new_speaker
+from antonym.text.speakers.core import PhraseSpeaker
 
 from antonym_utest.text import generate_phrase, create_content_list
 
 
 def new_default_mixer():
-    return Mixer.new(new_speaker()[1])
+    # return Mixer.new(new_speaker()[1])
+    return Mixer(PhraseSpeaker())
 
 def _inject(word, phrase):
     """ injects a word into a phrase """
@@ -31,7 +32,8 @@ def _source(id):
 
 def _content(id, length=8):
     source = _source(0)
-    return MockEntity(key_name=str(id), body=generate_phrase(length), source=source, source_name=source.name)
+    id_str = str(id)
+    return MockEntity(key_name=id_str, guid=id_str, body=generate_phrase(length), source=source, source_name=source.name)
 
 
 class MixerTest(unittest.TestCase):
@@ -112,7 +114,8 @@ class MixerTest(unittest.TestCase):
         source = MockEntity(key_name=source_name, name=source_name)
         
         def _content(id):
-            return MockEntity(key_name=str(id), body=generate_phrase(5), source=source, source_name=source.name)
+            id_str = str(id)
+            return MockEntity(key_name=id_str, guid=id_str, body=generate_phrase(5), source=source, source_name=source.name)
         
         ArtifactSource.get_multiple_by_name(source_name).AndReturn((source, ))
         ArtifactContent.all().AndReturn(MockQuery(xrange(12), create_call=_content))
@@ -134,7 +137,8 @@ class MixerTest(unittest.TestCase):
         def _content(id):
             # toggles between sources
             source = sources[id % 2]
-            return MockEntity(key_name=str(id), body=generate_phrase(5), source=source, source_name=source.name)
+            id_str = str(id)
+            return MockEntity(key_name=id_str, guid=id_str, body=generate_phrase(5), source=source, source_name=source.name)
         
         ArtifactSource.get_multiple_by_name(source_names).AndReturn(sources)
         
@@ -157,9 +161,10 @@ class MixerTest(unittest.TestCase):
             'xfinity', 'Xfinity', 'xfinity.com',
             'thePlatform', 'theplatform', 'platform', 'the platform',
             'xcal', 'excalibur', 'Excalibur', 'ccp', 'CCP',
-            'mhorwitz', 'horwitz', 'bad dog', 'Bad Dog',
+            'mhorwitz', 'mhorwtiz', 'horwitz', 'bad dog', 'Bad Dog',
             'jason press', 'Jason Press', 'jpress',
             'amy banse', 'sam schwartz', 'bruce',
+            'https://www.yammer.com/theplatform.com/nickrossi',
             'nigger', 'NIGGER', 'Nigger', 'nigga', 'NIGGA', 'Nigga')
         
         # these corner-case words should remain untouched
@@ -170,7 +175,7 @@ class MixerTest(unittest.TestCase):
         
         def _content(include_word):
             source = _source(0)
-            return MockEntity(key_name=include_word, body=_inject(include_word , generate_phrase(5)), source=source, source_name=source.name)
+            return MockEntity(key_name=include_word, guid=include_word, body=_inject(include_word , generate_phrase(5)), source=source, source_name=source.name)
 
         # #no should be surrounded by spaces or the start/end of text
         replace_word = "#hi"
@@ -199,7 +204,7 @@ class MixerTest(unittest.TestCase):
                 moxer.VerifyAll()
 
         def blacklist_call(word, source_text, mixed_text):
-            self.assertFalse(word in mixed_text, mixed_text)
+            self.assertFalse(word in mixed_text, "'%s' contains '%s'; should not" % (mixed_text, word))
             self.assert_(black_replacement_regex.search(mixed_text), "%s -> %s" % (source_text, mixed_text))
 
         test_words(blacklist_words, blacklist_call)
@@ -210,6 +215,6 @@ class MixerTest(unittest.TestCase):
         test_words(untouched_words, untouched_call)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     basic_config()
     unittest.main()

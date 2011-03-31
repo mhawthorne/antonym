@@ -11,11 +11,9 @@ import simplejson as json
 from antonym.mixer import Mixer
 from antonym.text.speakers import new_speaker, new_random_speaker
 
-from antonym.core import DataException, NotFoundException
-from antonym.web.services import require_service_user
+from antonym.core import NotFoundException
 
-from katapult.auth import require_admin
-from katapult.core import Exceptions, Hashes
+from katapult.core import DataException, Exceptions, Hashes
 from katapult import log
 from katapult.models import Models
 from katapult.requests import time_request, RequestHelper
@@ -34,7 +32,7 @@ class MixtureHandler(webapp.RequestHandler):
             else:
                 speaker_name, speaker = new_random_speaker()
                 logging.debug("speaker: %s" % str(speaker))
-                mixer = Mixer.new(speaker)
+                mixer = Mixer(speaker)
         
             # direct message
             message = self.request.get("q", None)
@@ -57,7 +55,7 @@ class MixtureHandler(webapp.RequestHandler):
             logging.debug("sources: %s" % str(sources))
             source_hash_list = [s.name for s in sources]
             mix_hash = {"sources": source_hash_list,
-                "speaker": speaker_name,
+                "speaker": {"name": speaker_name, "id": hash(speaker), "details": str(speaker)},
                 "body": content}
             helper.write_json(mix_hash)
         except NotFoundException, ex:
@@ -78,20 +76,13 @@ class MixtureResponseHandler(webapp.RequestHandler):
             helper.error(400, "q must be provided")
             return
         message = urllib.unquote(message)
-        sources, response = Mixer.new(new_speaker()).mix_response(message)
-        logging.debug("sources:%s, response:%s" % (sources, response))
-        result = dict(response=response)
-        helper.write_json(result)
+        try:
+            sources, response = Mixer(new_speaker()).mix_response(message)
+            logging.debug("sources:%s, response:%s" % (sources, response))
+            result = dict(response=response)
+            helper.write_json(result)
+        except DataException, ex:
+            helper.error(503, Exceptions.format(ex))
+            logging.error(ex)
+        
 
-
-# application = webapp.WSGIApplication(
-#     [('/api/mixture/response', MixtureResponseHandler),
-#     ('/api/mixture(?:/(.+))?', MixtureHandler)])
-# 
-# 
-# def main():
-#     log.basic_config()
-#     run_wsgi_app(application)
-# 
-# if __name__ == "__main__":
-#     main()

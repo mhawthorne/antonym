@@ -22,6 +22,7 @@ from katapult.requests import RequestHelper
 from antonym.accessors import ArtifactAccessor, ArtifactSourceAccessor, UrlResourceAccessor
 from antonym.core import AppException, NotFoundException
 from antonym.ingest import model
+from antonym.ingest.feeds import generate_feed_entries
 from antonym.model import Feed
 from antonym.web import read_json_fields, unicode_hash
 from antonym.web.services import require_service_user, Services
@@ -72,15 +73,5 @@ class IngestParseHandler(webapp.RequestHandler):
     def get(self, feed_url):
         feed_url = "http://%s" % feed_url
         helper = RequestHelper(self)
-        entries = [dict(title=e.title, link=e.link, content=e.stripped_content, modified=str(e.modified)) for e in model.parse_feed_entries(feed_url)]
+        entries = [dict(title=e.title, link=e.link, content=e.stripped_content, modified=str(e.modified)) for e in generate_feed_entries(feed_url)]
         helper.write_json(entries)
-
-
-# application = webapp.WSGIApplication([('/api/ingest/(.+)', IngestHandler)])
-# 
-# def main():
-#     log.config()
-#     run_wsgi_app(application)
-# 
-# if __name__ == "__main__":
-#     main()

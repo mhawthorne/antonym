@@ -8,36 +8,66 @@ from katapult.reflect import create_decorated_class, decorate_class
 from katapult.security import forbidden
 
 from antonym.web.activity import ActivityLogHandler
-from antonym.web.artifacts import ArtifactHandler, ArtifactsHandler
+from antonym.web.artifacts import ArtifactHandler, ArtifactsHandler, ArtifactsSearchHandler
+from antonym.web.config import ConfigHandler
 from antonym.web.feeds import FeedHandler, FeedsHandler
 from antonym.web.ingest import IngestHandler, IngestParseHandler
+from antonym.web.memcache import MemcacheHandler
 from antonym.web.mixtures import MixtureHandler, MixtureResponseHandler
+from antonym.web.resources import ResourcesSearchHandler, ResourcesHandler, ResourceHandler
+from antonym.web.responses import ResponsesHandler
 from antonym.web.services import require_digest_login, require_service_user
 from antonym.web.sources import SourceCleanerHandler, SourceHandler, SourcesHandler
-
+from antonym.web.status import StatusHandler
+from antonym.web.tweeter import TwitterActorHandler, TwitterApiHandler, TwitterDirectHandler, TwitterMixHandler,\
+    TwitterFollowersHandler, TwitterFriendsHandler, TwitterFriendHandler, TwitterMentionsHandler,\
+    TwitterFriendsTimelineHandler, TwitterPublicTimelineHandler, TwitterResponseHandler, TwitterUserHandler
 
 ALLOW_PUBLIC_WRITES = "allow_public_writes"
+ALLOW_OPEN_READS = "allow_public_reads"
 
 public_prefix = "/api/public"
 private_prefix = "/api/private"
 
 allow_public_writes = { ALLOW_PUBLIC_WRITES: True }
+allow_open_reads = { ALLOW_OPEN_READS: True }
+
 
 def build_path_list():
     # TODO: need to order paths
     # keys are url regexes, values are (handler class, handler info dict) tuples
     service_paths = (
-        ("activity", ActivityLogHandler, {}),
+        ("activity", ActivityLogHandler, None),
         ("artifacts", ArtifactsHandler, allow_public_writes),
+        ("artifacts/-/search", ArtifactsSearchHandler, None),
         ("artifacts/(.+)", ArtifactHandler, allow_public_writes),
-        ("feeds", FeedsHandler, {}),
-        ("feeds/(.+)", FeedHandler, {}),
-        ("ingest/(.+)", IngestHandler, {}),
-        ("ingest-parse/(.+)", IngestParseHandler, {}),
-        ("mixtures(?:/(.+))?", MixtureHandler, {}),
-        ("sources/-/clean", SourceCleanerHandler, {}),
+        ('config/?([^/]+)?', ConfigHandler, None),
+        ("feeds", FeedsHandler, None),
+        ("feeds/(.+)", FeedHandler, None),
+        ("ingest/(.+)", IngestHandler, None),
+        ("ingest-parse/(.+)", IngestParseHandler, None),
+        ("memcache", MemcacheHandler),
+        ("mixtures(?:/(.+))?", MixtureHandler, allow_open_reads),
+        ('resources/-/search', ResourcesSearchHandler),
+        ('resources/?(\d+)?', ResourcesHandler),
+        ('resources/(.+)', ResourceHandler),
+        ('responses', ResponsesHandler),
+        ("sources/-/clean", SourceCleanerHandler, None),
         ("sources/(.+)", SourceHandler, allow_public_writes),
-        ("sources", SourcesHandler, {})
+        ("sources", SourcesHandler, None),
+        ("status", StatusHandler, None),
+        ('twitter/act', TwitterActorHandler, None),
+        ('twitter/direct', TwitterDirectHandler, None),
+        ('twitter/mix', TwitterMixHandler, None),
+        ('twitter/followers', TwitterFollowersHandler, None),
+        ('twitter/friends', TwitterFriendsHandler, None),
+        ('twitter/friends/(.+)', TwitterFriendHandler, None),
+        ('twitter/friends-timeline', TwitterFriendsTimelineHandler),
+        ('twitter/mentions/(\d+)', TwitterMentionsHandler),
+        ('twitter/public-timeline', TwitterPublicTimelineHandler),
+        ('twitter/raw/(.+)', TwitterApiHandler),
+        ('twitter/respond', TwitterResponseHandler),
+        ('twitter/user/(.+)', TwitterUserHandler)
     )
 
     read_methods = ("head", "get")
@@ -49,24 +79,38 @@ def build_path_list():
     forbidden_decorator = forbidden()
 
     path_list = []
-    for path, klass, info in service_paths:
+    for parts in service_paths:
+        if len(parts) == 3:
+            path, klass, info = parts
+        elif len(parts) == 2:
+            path, klass = parts
+        else:
+            logging.warn("invalid tuple: %s" % str(parts)) 
+            continue
+            
         pretty_svc = "%s -> %s" % (path, klass.__name__)
-        # logging.debug("%s %s" % (pretty_svc, info))
     
         # all actions accessable by google service user
         path_list.append(("%s/%s" % (private_prefix, path), create_decorated_class(klass, google_decorator, methods=all_methods)))
     
-        logging.debug("%s %s %s" % (info, ALLOW_PUBLIC_WRITES, info.get(ALLOW_PUBLIC_WRITES)))
-    
-        if info.get(ALLOW_PUBLIC_WRITES):
-            logging.debug("enabling public read-write access for %s" % pretty_svc)
-            # enables digest for read methods
-            public_klass = create_decorated_class(klass, digest_decorator, methods=all_methods)            
+        if info:
+            public_klass = klass
+            
+            if info.get(ALLOW_PUBLIC_WRITES):
+                # wraps all methods with digest.
+                logging.debug("enabling public read-write access for %s" % pretty_svc)
+                public_klass = create_decorated_class(klass, digest_decorator, methods=all_methods)
+                
+            if info.get(ALLOW_OPEN_READS):
+                # wraps write methods with digest.  leaves reads methods unsecured.
+                logging.debug("enabling open read access for %s" % pretty_svc)
+                public_klass = create_decorated_class(klass, digest_decorator, methods=write_methods)                
         else:
             logging.debug("enabling public read-only access for %s" % pretty_svc)
         
-            # enables digest for read methods
+            # wraps read methods with digest
             public_klass = create_decorated_class(klass, digest_decorator, methods=read_methods)
+            
             # rejects digest write methods
             decorate_class(public_klass, forbidden_decorator, methods=write_methods)
     

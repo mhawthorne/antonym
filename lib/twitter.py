@@ -2227,6 +2227,10 @@ class Api(object):
     if 'error' in data:
       raise TwitterError(data['error'])
 
+  def FetchPath(self, path):
+      url = 'http://api.twitter.com/%s' % path
+      return self._FetchUrl(url)
+
   def _FetchUrl(self,
                 url,
                 post_data=None,

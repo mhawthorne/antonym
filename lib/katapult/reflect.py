@@ -1,6 +1,10 @@
 import logging
 
 
+def get_full_class_name(instance):
+    """ returns full class name for instance """
+    return "%s.%s" % (instance.__module__, instance.__class__.__name__)
+    
 def get_class(classname):
     """ returns a class for the specified string """
     parts = classname.split('.')

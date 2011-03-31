@@ -7,11 +7,24 @@ from katapult.core import Record
 
 class TweetAnalyzerTest(TestCase):
     
-    def test_should_respond(self):
-        analyzer = TweetAnalyzer()
-        self.assert_(analyzer.should_respond(self.__msg("hi")), "should have responded")
-        self.assertFalse(analyzer.should_respond(self.__msg("RT @livelock")), "should not have responded")
+    def setUp(self):
+        self.analyzer = TweetAnalyzer()
+    
+    def test_should_respond_returns_true_for_normal_message(self):
+        self.assert_(self.analyzer.should_respond(self.__msg("hi")), "should have responded")
+    
+    def test_should_respond_returns_false_for_retweet_of_me(self):
+        self.assertFalse(self.analyzer.should_respond(self.__msg("RT @livelock")), "should not have responded")
 
+    def test_should_retweet_returns_true_for_normal_message(self):
+        self.assert_(self.analyzer.should_respond(self.__msg("hi")), "should have responded")
+
+    def test_should_retweet_returns_false_for_retweet_of_me(self):
+        self.assertFalse(self.analyzer.should_respond(self.__msg("RT @livelock")), "should not have responded")
+
+    def __retweet_of_me(self):
+        self.__msg("RT @livelock something ridiculous and unintelligible")
+        
     def __msg(self, text):
         return Record(text=text)
 

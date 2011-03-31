@@ -1,4 +1,4 @@
-from katapult.caching import Cache, MemcacheQueue
+from katapult.caching.queue import MemcacheQueue
 from katapult.dates import day_seconds
 
 def get_activity_queue():

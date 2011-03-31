@@ -2,7 +2,7 @@ from StringIO import StringIO
 import traceback
 from unittest import main, TestCase
 
-import mox
+from mox import IgnoreArg, Mox
 
 from google.appengine.api.labs import taskqueue
 from google.appengine.ext import deferred
@@ -22,46 +22,41 @@ from katapult.mocks import MockEntity, MockKey, MockQuery
 from antonym_utest.web import new_mock_request_response
 
 
-class CronHandlersTest(TestCase):
+def _stub_taskqueue(moxer):
+    moxer.StubOutWithMock(taskqueue, "add", use_mock_anything=True)
+
+def _assert_handles_error(call):
+    exc = call()
+    print "handled: %s: %s" % (exc.__class__.__name__, exc)
+
+
+class CronTwitterActorHandlerTest(TestCase):
 
     def test_main(self):
-        moxer = mox.Mox()
+        moxer = Mox()
         moxer.StubOutWithMock(util, "run_wsgi_app")
         web_main()
         
     def test_cron_twitter_actor_handler(self):
-        moxer = mox.Mox()
+        moxer = Mox()
         request, response = new_mock_request_response(moxer)
         
-        self.__stub_taskqueue(moxer)
+        _stub_taskqueue(moxer)
         
-        taskqueue.add(url=mox.IgnoreArg(), countdown=mox.IgnoreArg())
+        taskqueue.add(url=IgnoreArg(), countdown=IgnoreArg())
         moxer.ReplayAll()
         handler = CronTwitterActorHandler()
         handler.initialize(request, response)
         handler.get()
         moxer.VerifyAll()
 
+
+class SafeTwitterActorHandlerTest(TestCase):
+    
     def test_safe_twitter_actor_handler(self):
-        moxer = mox.Mox()
+        moxer = Mox()
         
         request, response = new_mock_request_response(moxer)
-        
-        # moxer.StubOutWithMock(ConfigurationAccessor, "get")
-        # config = moxer.CreateMock(Configuration)
-        # config.is_tweeting=True
-        # ConfigurationAccessor.get().AndReturn(config)
-        # 
-        # moxer.StubOutWithMock(TwitterConnector, "new_api")
-        # twitter_api = moxer.CreateMock(twitter.Api)
-        # TwitterConnector.new_api().AndReturn(twitter_api)
-        # 
-        # moxer.StubOutWithMock(ActivityReporter, "__new__")
-        # reporter = moxer.CreateMock(ActivityReporter)
-        # ActivityReporter.__new__(ActivityReporter).AndReturn(reporter)
-        # twitter_api.GetDirectMessages().AndReturn(())
-        # twitter_api.GetReplies().AndReturn(())
-        # reporter.did_not_act()
         
         moxer.StubOutWithMock(TwitterActor, "__new__")
         actor = moxer.CreateMock(TwitterActor)
@@ -78,11 +73,14 @@ class CronHandlersTest(TestCase):
             exception, msg = result
             self.fail("exception occurred: %s" % msg)
 
-    def test_ingest_driver(self):
-        moxer = mox.Mox()
+
+class CronIngestDriverHandlerTest(TestCase):
+    
+    def test_get_registers_appropriate_tasks(self):
+        moxer = Mox()
         request, response = new_mock_request_response(moxer)
         
-        self.__stub_taskqueue(moxer)
+        _stub_taskqueue(moxer)
         moxer.StubOutWithMock(Feed, "find_active", use_mock_anything=True)
         
         def create_call(i):
@@ -95,17 +93,33 @@ class CronHandlersTest(TestCase):
         
         # expects queued tasks for each feed
         for i in q_range:
-            taskqueue.add(name=mox.IgnoreArg(), url=mox.IgnoreArg())
+            taskqueue.add(name=IgnoreArg(), url=IgnoreArg())
         
         moxer.ReplayAll()
         handler = CronIngestDriverHandler()
         handler.initialize(request, response)
         handler.get()
         moxer.VerifyAll()
+
+
+class CronIngestHandlerTest(TestCase):
+    
+    def test_post_handles_ingest_error(self):
+        mox = Mox()
+        request, response = new_mock_request_response(mox)
+        mox.StubOutWithMock(Feed, "get_by_source_name")
         
-    def __stub_taskqueue(self, moxer):
-        moxer.StubOutWithMock(taskqueue, "add", use_mock_anything=True)
-         
+        feed_name = "blah"
+        Feed.get_by_source_name(feed_name, return_none=True).AndRaise(Exception("real bad"))
+        
+        handler = CronIngestHandler()
+        handler.initialize(request, response)
+        
+        mox.ReplayAll()        
+        _assert_handles_error(lambda: handler.post(feed_name))
+        mox.VerifyAll()
+
+
 if __name__ == "__main__":
     basic_config()
     main()

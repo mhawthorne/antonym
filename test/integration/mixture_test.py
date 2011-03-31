@@ -25,7 +25,8 @@ class AbstractMixturesTest(TestCase):
         self.fail("not implemented")
         
     def test_unauthorized(self):
-        assert_http_responses(self, self._base_url(), ("DELETE", "HEAD", "GET", "POST", "PUT"), (401, 403, 405))
+        # assert_http_responses(self, self._base_url(), ("DELETE", "HEAD", "GET", "POST", "PUT"), (401, 403, 405))
+        assert_http_responses(self, self._base_url(), ("DELETE", "HEAD", "POST", "PUT"), (401, 403, 405))
 
 
 class PrivateMixturesTest(AbstractMixturesTest):
@@ -41,7 +42,7 @@ class PublicMixturesTest(AbstractMixturesTest):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         sys.stderr.write("ERROR - expected <host>\n")
         sys.exit(1)
 

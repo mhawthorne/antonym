@@ -98,18 +98,3 @@ class FeedHandler(webapp.RequestHandler):
             return
         feed.delete()
         helper.set_status(204)
-
-
-# application = webapp.WSGIApplication(
-#     [('/api/feeds', FeedsHandler),
-#     ('/api/feeds/(.+)', FeedHandler)])
-# 
-# 
-# def main():
-#     log.basic_config()
-#     run_wsgi_app(application)
-# 
-# if __name__ == "__main__":
-#     main()
-#         
-        

@@ -151,7 +151,7 @@ class PublicArtifactTest(AbstractArtifactTest):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         sys.stderr.write("ERROR - expected <host>\n")
         sys.exit(1)
 

@@ -13,15 +13,15 @@ from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource, Twitter
 
 from katapult.accessors.counters import Counter
 from katapult import caching
-from katapult.caching import Cache
 from katapult.models import random_query_results
+from katapult.strings import sanitize_encoding
 
 
-class Mixer:
+class Mixer(object):
     
     MINIMUM_ARTIFACTS = 1
     
-    CONTENT_BATCH_SIZE = 100
+    CONTENT_BATCH_SIZE = 50
     
     _blacklist_phrase = '#hi'
     
@@ -31,9 +31,10 @@ class Mixer:
         r'#?[fF]ancast\S*', 
         r'(the ?)?[pP]latform',
         r'[xX]finity\S*',
-        r'm?horwitz', r'[bB]ad ?[dD]og', r'BD',
+        r'm?horw[itz]{3}', r'[bB]ad ?[dD]og', r'BD',
         r'[jJ]ason [pP]ress', r'jpress',
-        r'amy banse', r'sam schwartz', r'bruce'
+        r'amy banse', r'sam schwartz', r'bruce',
+        r'https?://www\.yammer\.com/\S+'
     ])
 
     # relax, I'm half black
@@ -45,13 +46,17 @@ class Mixer:
         r'aevans:?': '@aaronte',
         r'arpit:?': '@arpit',
         r'bschmaus:?': '@schmaus',
-        r'dillera?:?': '@dillera',
+        # matches: dilllera, _dillera
+        r'_*dillera?:?': '@dillera',
+        r'e?schrag:?': '@kusand',
         r'jho:?': '@jho255',
-        r'(j(onj)?lee|jlee):?': '@jonjlee',
-        r'jvolkman:?': '@jvolkman',
+        # matches: jonjlee, jonlee, jonjle1
+        r'(j(onj?)?lee?\d?):?': '@jonjlee',
+        # matches: jvolkman, jvolkman_, jvolkman-work
+        r'j?volkman[\w_-]*:?': '@jvolkman',
         r'mblinn:?': '@NovusTiro',
-        r'mhawthorne:?': '@mhawthorne',
-        r'(mmattozzi|cimmy|sonofcim):?': '@mikemattozzi',
+        r'm?hawthorne:?': '@mhawthorne',
+        r'(mmattozzi_*|cimmy|sonofcim)_*:?': '@mikemattozzi',
         r'mschaffer:?': '@matschaffer',
         r'ohpauleez:?': '@ohpauleez',
         r'vfumo:?': '@neodem',
@@ -61,17 +66,9 @@ class Mixer:
         _rewrite_map[b] = _blacklist_phrase
     
     # maps #milhouse names (or other names that I've ingested to twitter names)
-    _twitter_user_rewriter = RegexRewriter(_rewrite_map)
-    
-    # will this let me mock a Mixer?
-    @classmethod
-    def new(cls, speaker):
-        return Mixer(speaker, from_factory=True)
+    _mix_rewriter = RegexRewriter(_rewrite_map)    
         
     def __init__(self, speaker, **kw):
-        if not "from_factory" in kw:
-            raise IllegalArgumentException("constructor should not be called directly")
-
         self.__speaker = speaker
     
     def mix_sources(self, *source_names):
@@ -216,7 +213,12 @@ class Mixer:
             (soures, content) tuple
         """
         sources, raw_content = self.__mix_content(contents, **kw)
-        return sources, self._twitter_user_rewriter.rewrite(raw_content)
+        rewritten_content = self._mix_rewriter.rewrite(raw_content)
+        
+        if rewritten_content != raw_content:
+            logging.info("rewriting '%s' -> '%s'" % (raw_content, rewritten_content))
+            
+        return sources, rewritten_content
 
     def __mix_content(self, contents, **kw):
         """
@@ -229,9 +231,20 @@ class Mixer:
         
         for content in contents:
             source_name = content.source_name
-            body = content.body
+            body = sanitize_encoding(content.body).strip()
+            
+            # skips empty bodies
+            if not body:
+                continue
+
+            # logging bodies here makes things very hard to debug
+            logging.debug("__mix_content source_name:'%s' guid:%s" % (content.source_name, content.guid))
+            #logging.debug("__mix_content body:%s" % body)
+            
             if not sources.has_key(source_name):
                 sources[source_name] = content.source
-            logging.debug("__mix_content body:%s" % body)
+                
             self.__speaker.ingest(body)
-        return sources.values(), self.__speaker.speak(min_length, max_length)
+            
+        # sanitizing encoding here since I think it's closest to the source.
+        return sources.values(), sanitize_encoding(self.__speaker.speak(min_length, max_length))

@@ -1,24 +1,25 @@
-import unittest
+from unittest import main, TestCase
 
-import UserDict
+from google.appengine.api import memcache
+from google.appengine.ext import db
 
-import mox
+from mox import IsA, Mox
 
-from antonym.accessors import ArtifactAccessor, Counters
-from antonym.core import DuplicateDataException, IllegalArgumentException, NotFoundException
+from antonym.accessors import ArtifactAccessor, ArtifactSourceAccessor, Counters, FeedAccessor
+from antonym.core import ConflictingDataException, DuplicateDataException, IllegalArgumentException, NotFoundException
 from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource
 
 from antonym_test import test_helper
 from katapult.mocks import MockEntity, MockKey, MockQuery
 
 
-class ArtifactAccessorTest(unittest.TestCase):
+class ArtifactAccessorTest(TestCase):
 
     SOURCE_NAME = 'antonym.test'
     CONTENT_TYPE = 'text/plain'
     
     def setUp(self):
-        self.moxer = mox.Mox()
+        self.moxer = Mox()
         self.test_id = test_helper.test_id(self)
         
     def tearDown(self):
@@ -123,5 +124,55 @@ class ArtifactAccessorTest(unittest.TestCase):
         self.moxer.VerifyAll()
 
 
+class ArtifactSourceAccessorTest(TestCase):
+    
+    def setUp(self):
+        self.m = Mox()
+
+    def test_delete_by_name_missing_source(self):
+        self.m.StubOutWithMock(ArtifactSource, "get_by_name")
+        
+        name = "mhawthorne"
+        ArtifactSource.get_by_name(name)
+        
+        self.m.ReplayAll()
+        self.assertRaises(NotFoundException, ArtifactSourceAccessor.delete_by_name, name)
+        self.m.VerifyAll()
+
+    def test_delete_by_name_deletes_source_with_no_referencing_feed(self):
+        self.m.StubOutWithMock(ArtifactSource, "get_by_name")
+        self.m.StubOutWithMock(FeedAccessor, "get_by_source_name")
+        self.m.StubOutWithMock(ArtifactInfo, "find_by_source")
+        self.m.StubOutWithMock(ArtifactContent, "find_by_source")
+        self.m.StubOutWithMock(db, "delete")
+        self.m.StubOutWithMock(memcache, "delete")
+        
+        name = "mhawthorne"
+        source = MockEntity(key_name=name)
+        ArtifactSource.get_by_name(name).AndReturn(source)
+        FeedAccessor.get_by_source_name(name, return_none=True)
+        ArtifactInfo.find_by_source(source, keys_only=True).AndReturn(())
+        ArtifactContent.find_by_source(source).AndReturn(())
+        db.delete(source)
+        memcache.delete(IsA(str)).AndReturn(1)
+        
+        self.m.ReplayAll()
+        ArtifactSourceAccessor.delete_by_name(name)
+        self.m.VerifyAll()
+
+    def test_delete_by_name_deletes_source_with_referencing_feed(self):
+        self.m.StubOutWithMock(ArtifactSource, "get_by_name")
+        self.m.StubOutWithMock(FeedAccessor, "get_by_source_name")
+        
+        name = "mhawthorne"
+        source = MockEntity(key_name=name)
+        ArtifactSource.get_by_name(name).AndReturn(source)
+        FeedAccessor.get_by_source_name(name, return_none=True).AndReturn(MockEntity(key=name, url="http://real.ly"))
+        
+        self.m.ReplayAll()
+        self.assertRaises(ConflictingDataException, ArtifactSourceAccessor.delete_by_name, name)
+        self.m.VerifyAll()
+
+
 if __name__ == '__main__':
-    unittest.main()
+    main()

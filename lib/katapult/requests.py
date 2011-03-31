@@ -1,11 +1,10 @@
 import logging
 import re
+import sys
 import time
 import traceback
 
 import simplejson as json
-
-from katapult.log import LoggerFactory
 
 
 def time_request():
@@ -16,15 +15,14 @@ def time_request():
             t1 = time.time()
             res = f(*args, **kwargs)
             t2 = time.time()
-            LoggerFactory.logger("request.timer").debug("url=%s time=%0.2fms" % (handler.request.path_qs, (t2-t1)*1000.0))
+            logging.debug("url=%s time=%0.2fms" % (handler.request.path_qs, (t2-t1)*1000.0))
             return res
         return args_wrapper
     return func_wrapper
 
 
-def monitor_request(**kw):
+def monitor_request(always_succeed=False, **kw):
     """ decorator that saves errors in cache """
-    always_succeed = kw.get("always_succeed", False)
     def func_wrapper(f):
         def args_wrapper(*args, **kw):
             handler = args[0]
@@ -34,7 +32,7 @@ def monitor_request(**kw):
                 msg = traceback.format_exc()
                 logging.error(msg)
                 if always_succeed:
-                    return False
+                    return sys.exc_info()[1]
                 else:
                     raise
         return args_wrapper

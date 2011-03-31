@@ -58,7 +58,7 @@ class Markov1Speaker(SelectingSpeaker):
             self.__word_weights.append((w, p[0]))
 
          
-    def select(self, selected):
+    def select(self, selected, min_length, max_length):
         """
         params:
             selected - list of selected words.
@@ -216,7 +216,7 @@ class Markov2Speaker(SelectingSpeaker):
         # logs all head phrases with cardinality > 1
         # logging.debug("heads: %s" % filter(lambda p: p[1] > 1, sorted(self.__heads.items(), key=lambda p: p[1], reverse=True)))
 
-    def select(self, selected):
+    def select(self, selected, min_length, max_length):
         """
         params:
             selected - list of selected words.

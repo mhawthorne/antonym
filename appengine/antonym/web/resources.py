@@ -80,16 +80,16 @@ class ResourceHandler(webapp.RequestHandler):
         helper.write_json(resource_hash(resource))
 
 
-application = webapp.WSGIApplication([
-    ('/api/resources/-/search', ResourcesSearchHandler),
-    ('/api/resources/?(\d+)?', ResourcesHandler),
-    ('/api/resources/(.+)', ResourceHandler)
-    ])
-
-
-def main():
-  log.config()
-  run_wsgi_app(application)
-
-if __name__ == "__main__":
-  main()
+# application = webapp.WSGIApplication([
+#     ('/api/resources/-/search', ResourcesSearchHandler),
+#     ('/api/resources/?(\d+)?', ResourcesHandler),
+#     ('/api/resources/(.+)', ResourceHandler)
+#     ])
+# 
+# 
+# def main():
+#   log.config()
+#   run_wsgi_app(application)
+# 
+# if __name__ == "__main__":
+#   main()

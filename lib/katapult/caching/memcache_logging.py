@@ -18,7 +18,7 @@ def _log(msg):
 def get(key, **kw):
     value = memcache.get(key, **kw)
     action = "hit" if value else "miss"
-    _log("cache get %s %s" % (action, key))
+    _log("cache get %s %s %s" % (action, key, kw))
     return value
 
 def get_multi(keys, **kw):
@@ -29,11 +29,11 @@ def get_multi(keys, **kw):
     if value_len == key_len:
         action = "hit" 
     elif value_len and value_len < key_len:
-        action = "partial-hit"
+        action = "partial-hit (%s/%s)" % (value_len, key_len)
     else:
         action = "miss"
 
-    _log("cache get_multi %s %s" % (action, keys))
+    _log("cache get_multi %s %s %s" % (action, keys, kw))
     return values
 
 def set(key, value, **kw):
@@ -42,7 +42,7 @@ def set(key, value, **kw):
         action = "success"
     else:
         action = "error"
-    _log("cache set %s %s" % (action, key))
+    _log("cache set %s %s %s" % (action, key, kw))
     return result
 
 def delete(key, **kw):
@@ -53,7 +53,7 @@ def delete(key, **kw):
         action = "miss"
     elif result == 2:
         action = "hit"
-    _log("cache delete %s %s" % (action, key))
+    _log("cache delete %s %s %s" % (action, key, kw))
     return result
 
 def delete_multi(keys, **kw):
@@ -62,7 +62,7 @@ def delete_multi(keys, **kw):
         action = "success"
     else:
         action = "error"
-    _log("cache delete_multi %s %s" % (action, keys))
+    _log("cache delete_multi %s %s %s" % (action, keys, kw))
     return result
     
 def incr(key, **kw):
@@ -71,7 +71,7 @@ def incr(key, **kw):
         action = "hit %s" % result
     else:
         action = "miss"
-    _log("cache incr %s %s" % (action, key))
+    _log("cache incr %s %s %s" % (action, key, kw))
     return result
 
 def decr(key, **kw):
@@ -80,5 +80,5 @@ def decr(key, **kw):
         action = "hit %s" % result
     else:
         action = "miss"
-    _log("cache decr %s %s" % (action, key))
+    _log("cache decr %s %s %s" % (action, key, kw))
     return result

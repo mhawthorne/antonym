@@ -1,6 +1,7 @@
 import logging
 import re
 from StringIO import StringIO
+import traceback
 
 import httplib2
 import feedparser
@@ -59,25 +60,30 @@ def generate_feed_entries(url, **kw):
     max_entries = kw.get("max", None)
 
     doc = feedparser.parse(url)
-    
+    if doc.bozo:
+        raise FeedException(doc.bozo_exception)
+        
     count = 0
     for e in doc.entries:
         title = e.title
         logging.debug("generate_feed_entries processing entry '%s'" % title)
+        
         entry = FeedEntry(title=e.title,
-            etag=doc.etag,
             link=e.link)
 
-        # TODO: handle modified=None
-        if hasattr(e, "modified"):
+        if hasattr(doc, "etag"):
+            entry.set(etag=doc.etag)
+        
+        if hasattr(doc, "modified"):
             entry.set(modified=doc.modified)
 
-        if not hasattr(e, "content"):
+        if hasattr(e, "content"):
+            raw_content = e.content[0]['value']
+        elif e.summary:
+            raw_content = e.summary
+        else:
             logging.debug("no content found")
             continue
-
-        raw_content = e.content[0]['value']
-        
         # unescapes entities
         raw_content = unescape(raw_content)
         

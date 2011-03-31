@@ -10,29 +10,30 @@ from antonym.ttwitter import TwitterConnector, ReadOnlyTwitterApi
 
 class TwitterConnectorTest(TestCase):
     
-    def test_with_oauth(self):
+    def test_writable(self):
         m = Mox()
         
         config = m.CreateMock(Configuration)
         config.twitter_access_token = "oauth_token=1234&oauth_token_secret=5678"
-        config.twitter_read_only = False
+        config.twitter_read_only = "0"
         
-        m.StubOutWithMock(ConfigurationAccessor, "get")
-        ConfigurationAccessor.get().AndReturn(config)
+        m.StubOutWithMock(ConfigurationAccessor, "get_or_create")
+        ConfigurationAccessor.get_or_create().AndReturn(config)
         
         m.ReplayAll()
         api = TwitterConnector.new_api()
         self.__assert_is_instance(api, OAuthApi)
         m.VerifyAll()
 
-    def test_mock(self):
+    def test_read_only(self):
         m = Mox()
         
         config = m.CreateMock(Configuration)
         config.twitter_access_token = "oauth_token=1234&oauth_token_secret=5678"
+        config.twitter_read_only = "1"
         
-        m.StubOutWithMock(ConfigurationAccessor, "get")
-        ConfigurationAccessor.get().AndReturn(config)
+        m.StubOutWithMock(ConfigurationAccessor, "get_or_create")
+        ConfigurationAccessor.get_or_create().AndReturn(config)
         
         m.ReplayAll()
         api = TwitterConnector.new_api()

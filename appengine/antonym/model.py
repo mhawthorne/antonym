@@ -242,12 +242,17 @@ class TwitterResponse(db.Model):
     def create(cls, message_id, **kw):
         return cls(key_name=message_id, message_id=message_id, **kw).put()
 
+    @classmethod
+    def find_latest(cls, **kw):
+        return cls.all().order("-timestamp")
+
 
 class Configuration(db.Model):
 
     twitter_access_token = db.StringProperty()
     twitter_oauth_enabled = db.StringProperty()
     is_tweeting = db.StringProperty()
+    twitter_read_only = db.StringProperty(default="1")
     
     @classmethod
     def _key_name(cls):
@@ -258,10 +263,22 @@ class Configuration(db.Model):
         return cls.get_by_key_name(cls._key_name())
     
     @classmethod
+    def get_or_create(cls):
+        c = cls.get()
+        if not c:
+            c = cls._new()
+            c.put()
+        return c
+    
+    @classmethod
+    def _new(cls):
+        return cls(key_name=cls._key_name())
+        
+    @classmethod
     def update(cls, **kw):
         entity = cls.get()
         if not entity:
-            entity = cls(key_name=cls._key_name())
+            entity = cls._new()
         defined_props = entity.properties()
         for k, v in kw.iteritems():
             logging.info("%s %s=%s" % (cls._key_name(), k, v))

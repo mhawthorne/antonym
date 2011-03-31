@@ -65,7 +65,7 @@ class ArtifactsHelper:
                 modified_by=user)
             guid = info_key.name()
             helper.set_status(204)
-            location = ArtifactsHandler.artifact_uri(request, guid)
+            location = cls.artifact_uri(request, guid)
             helper.header("Location", location)
         except DuplicateDataException, ex:
             helper.error(409, ex.message)
@@ -113,24 +113,39 @@ class ArtifactsHelper:
         artifact_hash = {'guid': artifact_info.guid,
             'source': artifact_info.source.name,
             'content-type': artifact_info.content_type,
-            'modified': dates.format(artifact_info.modified),
+            'modified': artifact_info.modified.isoformat(),
             'modified-by': artifact_info.modified_by.email(),
             'body': artifact_content.body }
         if artifact_info.url:
             artifact_hash["url"] = artifact_info.url
         return artifact_hash
 
-
-class ArtifactsHandler(webapp.RequestHandler):
-    
     @classmethod
     def artifact_uri(cls, request, guid, **kw):
-        #return "http://%s%s/%s" % (request.environ['HTTP_HOST'], ArtifactsHelper.API_PREFIX, guid)
         return "%s%s/%s" % (request.host_url, request.path, guid)
+
+
+class ArtifactsHandler(webapp.RequestHandler):
     
     def post(self, **kw):
         ArtifactsHelper.post(self, **kw)
 
+    def get(self, **kw):
+        helper = RequestHelper(self)
+        start = int(self.request.get("start", 0))
+        count = int(self.request.get("count", 10))
+        
+        q = ArtifactInfo.all().order("-modified")
+        json_results = []
+        if q.count():
+            for a_info in q.fetch(count, start):
+                a_content = ArtifactAccessor.get_content_by_guid(a_info.guid)
+                json_results.append(ArtifactsHelper.artifact_to_hash(a_info, a_content))
+        helper.write_json(json_results)
+
+
+class ArtifactsSearchHandler(webapp.RequestHandler):
+    
     def get(self, **kw):
         helper = RequestHelper(self)
         q = self.request.get("q", None)
