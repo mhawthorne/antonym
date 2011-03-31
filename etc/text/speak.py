@@ -30,7 +30,9 @@ def run(speaker_name, speak_count, options):
     print "ingested %d lines of input" % (i+1)
     
     speaker.compile()
-    print speaker.describe()
+    
+    if options.verbose:
+        print speaker.describe()
 
     sizes = [i * 10 for i in range(12,15)]
 
@@ -45,8 +47,9 @@ def run(speaker_name, speak_count, options):
             print "+ %s [%d] %s" % (size_str, len(text), text)
             successes += 1
         except Exception, e:
-            # traceback.print_exc()
             print "! %s %s: %s" % (size_str, e.__class__.__name__, e)
+            if options.verbose:
+                traceback.print_exc()
         
     print "%d/%d successes (%.1f%%)" % (successes, speak_count, float(successes)/speak_count * 100)
     

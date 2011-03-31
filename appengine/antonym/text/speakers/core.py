@@ -9,9 +9,12 @@ from antonym.core import MissingDataException, NotImplementedException
 from antonym.text import InvalidMixtureException
 
 
-def calculate_length(words):
+def calculate_length(words, next=None):
     # len(words) at end is for spaces
-    return sum([len(w) for w in words]) + len(words)
+    length = sum([len(w) for w in words]) + len(words)
+    if next:
+        length += len(next) + 1
+    return length
 
 def join_words(words):
     return " ".join(words)
@@ -37,29 +40,29 @@ class SelectingSpeaker(AbstractSpeaker):
         
     def speak(self, min_length, max_length, **kw):
         parts = []
-        parts_len = 0
+        length = 0
         words = None
-        while parts_len < max_length:
+        while length < max_length:
             attempt = 0
             while not words and attempt < 5:
                 # copies list to protect from select() mutating it
                 words = self.select(list(parts), min_length, max_length)
                 attempt += 1
+                
             # stops if words couldn't be selected
             if not words:
                 break
-            
+                            
+            parts.extend(words)
+            length = calculate_length(parts)
+
             # TODO: backtrack to last sensible ending
             # ensures that new words will not push me over max_length
-            if parts_len + calculate_length(words) > max_length:
-                raise InvalidMixtureException(join_words(words))
-                
-            parts.extend(words)
+            if length > max_length:
+                raise InvalidMixtureException("'%s' {length:%d}" % (join_words(parts), calculate_length(parts)))
             
             # resets words
             words = None
-            
-            parts_len = calculate_length(parts)
         return join_words(parts)
     
     # "abstract" methods
@@ -135,11 +138,17 @@ class RandomSpeaker(SelectingSpeaker):
                 self.__words.add(word)
 
     def select(self, selected, min_length, max_length):
-        while True:
-            w = random.sample(self.__words, 1)
-            if w not in selected:
-                break
-        return w
+        next = self.__words.pop()
+        if calculate_length(selected, next) > max_length:
+            return None
+        else:
+            return (next,)
+        
+        # while True:
+        #     w = random.sample(self.__words, 1)
+        #     if w not in selected:
+        #         break
+        # return w
 
     def describe(self):
         return str(self)
@@ -178,7 +187,7 @@ def tokenize_sentences(phrase, limit=50, transform_call=None, lowercase=False):
             result = replacement
             if transform_call:
                 result = transform_call(replacement)
-                logging.debug("transformed: '%s' -> '%s'" % (replacement, result))
+                # logging.debug("transformed: '%s' -> '%s'" % (replacement, result))
             yield result
         else:
             logging.debug("ignoring sentence: '%s'" % replacement)

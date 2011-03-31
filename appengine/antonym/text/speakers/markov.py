@@ -238,8 +238,12 @@ class Markov2Speaker(SelectingSpeaker):
                     Symbols.END in pair_stats:
                     next_word = None
                 else:
+                    # don't end if we're not longer than min_length
+                    logging.debug("select_next %s %s" % (current_pair, str(pair_stats)))
+                    
                     # stats were found for this pair
-                    next_word = rrandom.select_weighted_with_replacement(pair_stats[1])
+                    # next_word = rrandom.select_weighted_with_replacement(pair_stats[1])
+                    next_word = random.choice(pair_stats[1])[0]
                 
             if next_word is Symbols.END: next_word = None
             return (next_word,) if next_word else None

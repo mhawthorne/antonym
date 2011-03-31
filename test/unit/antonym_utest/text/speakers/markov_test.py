@@ -33,12 +33,15 @@ class Markov2Test(TestCase):
         max_length = 130
         errors = KeyCounter()
         for i in xrange(run_count):
-            result = speaker.speak(min_length, max_length)
-            if len(result) < min_length:
-                errors.increment("short")
-            elif len(result) > max_length:
-                errors.increment("long")
-            
+            try:
+                result = speaker.speak(min_length, max_length)
+                if len(result) < min_length:
+                    errors.increment("short")
+                elif len(result) > max_length:
+                    errors.increment("long")
+            except Exception, e:
+                errors.increment(e)
+
         failures = []
         for k, v in errors.iteritems():
             # fails if error occurs more than 1% of the time
@@ -46,8 +49,8 @@ class Markov2Test(TestCase):
                 failures.append((k, v))
         
         if failures:
-            # self.fail(failures)
-            print failures
+            self.fail(failures)
+            # print failures
         
     def __new_speaker(self):
         return Markov2Speaker()
