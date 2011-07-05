@@ -15,7 +15,7 @@ def flag_is_false(val)
 end
 
 def fail(msg, code=1)
-  $stderr.puts msg
+  $stderr.puts "ERROR - #{msg}"
   exit code
 end
 
@@ -198,7 +198,9 @@ task :verify_passwd do
 end
 
 def find_appcfg_bin
-  `which appcfg.py`.strip
+  bin = `which appcfg.py`.strip
+  fail "could not find appcfg.py" if bin.empty?
+  bin 
 end
 
 desc "deploys application to appengine"

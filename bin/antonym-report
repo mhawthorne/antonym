@@ -26,4 +26,4 @@ echo `grep "cron 204" $logs`
 echo
 
 echo "[stats]"
-(cd inquirer; rake http m=get p=/api/private/stats)
+(cd inquirer; rake http m=get p=/api/private/stats config=etc/prod.yaml)
