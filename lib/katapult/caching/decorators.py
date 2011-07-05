@@ -53,7 +53,7 @@ def cache_return_by_argument_key(key_call, **kw_dec):
     def function_wrapper(f):
         def args_wrapper(*args, **kw):
             key = key_call(*args, **kw)
-            refresh = kw.get("refresh", False)
+            refresh = kw.pop("refresh", False)
             value = memcache.get(key)
             if refresh or not value:
                 value = f(*args, **kw)

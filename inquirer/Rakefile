@@ -46,6 +46,7 @@ class ServiceListener
   
   def request(uri, method, headers={})
     puts "#{method} #{uri}\n#{headers.inspect}"
+    puts
   end
   
   def response(uri, response)
@@ -165,8 +166,9 @@ namespace :artifact do
 end
 
 
+desc "execute an HTTP method: m=method p=path config=config_file body=body"
 task :http do
-  method = get_env('m')
+  method = get_env('m', 'get')
   path = get_env('p')
   body = get_env('b', :no)
   body = nil if body == :no

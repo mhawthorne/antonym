@@ -18,6 +18,7 @@ from antonym.web.resources import ResourcesSearchHandler, ResourcesHandler, Reso
 from antonym.web.responses import ResponsesHandler
 from antonym.web.services import require_digest_login, require_service_user
 from antonym.web.sources import SourceCleanerHandler, SourceHandler, SourcesHandler
+from antonym.web.stats import StatsHandler
 from antonym.web.status import StatusHandler
 from antonym.web.tweeter import TwitterActorHandler, TwitterApiHandler, TwitterDirectHandler, TwitterMixHandler,\
     TwitterFollowersHandler, TwitterFriendsHandler, TwitterFriendHandler, TwitterMentionsHandler,\
@@ -55,6 +56,7 @@ def build_path_list():
         ("sources/-/clean", SourceCleanerHandler, None),
         ("sources/(.+)", SourceHandler, allow_public_writes),
         ("sources", SourcesHandler, None),
+		("stats", StatsHandler, None),
         ("status", StatusHandler, None),
         ('twitter/act', TwitterActorHandler, None),
         ('twitter/direct', TwitterDirectHandler, None),

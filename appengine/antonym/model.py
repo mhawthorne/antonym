@@ -182,6 +182,10 @@ class ArtifactInfo(db.Model):
     def find_by_content_md5(cls, md5, **kw):
         return cls.all(**kw).filter("content_md5 =", md5)
 
+    @classmethod
+    def find_newer(cls, datetime, **kw):
+        return cls.all(**kw).filter("modified > ", datetime)
+
 
 class ArtifactContent(search.SearchableModel):
 

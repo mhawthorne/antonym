@@ -197,13 +197,16 @@ task :verify_passwd do
   end
 end
 
+def find_appcfg_bin
+  `which appcfg.py`.strip
+end
+
 desc "deploys application to appengine"
 task :deploy => [ :lib_copy ] do
   default_login = :y
   login = get_env("login", default_login)
   
-  appcfg_bin = "appcfg.py"
-  appcfg = `which #{appcfg_bin}`.strip
+  appcfg = find_appcfg_bin()
   
   fail "#{appcfg_bin} not found" if appcfg.empty?
   
@@ -221,28 +224,50 @@ task :deploy => [ :lib_copy ] do
   run cmd
 end
 
+desc "fetches HTTP logs from appengine"
+task :fetch_logs do
+  out = get_env("out", "tmp/antonym.log")
+  appcfg = find_appcfg_bin()
+
+  Rake::Task["verify_passwd"].execute
+  cmd = "cat #{PASSWD_FILE} | "
+  
+  cmd << "#{appcfg} --passin --email=#{ADMIN_EMAIL} request_logs #{$appengine_dir} #{out}"
+  
+  run cmd
+end
+
+def tstamp
+  Time.now.strftime("%Y-%m-%d")
+end
 
 def create_dated_export_dir
-  tstamp = Time.now.strftime("%Y-%m-%d")
+  tstamp = tstamp()
   dated_export_dir = "#{DATA_EXPORT_DIR}/#{tstamp}"
   $fileutils.mkdir_p dated_export_dir
   dated_export_dir
 end
 
+def default_bulkloader_cmd(host, kind, file)
+  "--kind=#{kind} --db_filename=tmp/#{kind}-progress.sql3 --result_db_filename=tmp/#{kind}-result.sql3 --filename=#{file} " <<
+  "--url=#{host}/remote_api --email=#{ADMIN_EMAIL} --application=#{APP_ID} --passin "
+end
+
+
 def build_dump_cmd(host, kind, dir, keywords={})
   file = "#{dir}/#{kind}.sql3"
   
   "cat #{PASSWD_FILE} | " <<
-  "python2.5 #{locate_gae()}/bulkloader.py --dump --kind=#{kind} --filename=#{file} " <<
-  "--url=#{host}/remote_api --email=#{ADMIN_EMAIL} --app_id=#{APP_ID} --passin " <<
+  "python2.5 #{locate_gae()}/bulkloader.py --dump " <<
+  default_bulkloader_cmd(host, kind, file) <<
   "--num_threads=1 " <<
   "#{APPENGINE_DIR}"
 end
 
 def build_restore_cmd(host, kind, path, keywords={})
   "cat #{PASSWD_FILE} | "  <<
-  "python2.5 #{locate_gae()}/bulkloader.py --restore --kind=#{kind} --filename=#{path} " <<
-  "--url=#{host}/remote_api --email=#{ADMIN_EMAIL} --app_id=#{APP_ID} --passin " <<
+  "python2.5 #{locate_gae()}/bulkloader.py --restore " <<
+  default_bulkloader_cmd(host, kind, path) <<
   "#{APPENGINE_DIR}"
 end
 

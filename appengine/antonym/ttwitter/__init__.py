@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import re
+from urllib2 import HTTPError
 
 from oauth.oauth import OAuthToken
 from oauthtwitter import OAuthApi
@@ -45,6 +46,11 @@ def new_default_mixer():
 
 def describe_status(status):
     return "%s: %s" % (status.user.screen_name, status.text)
+
+
+# general wrapper around Twitter exceptions
+class TwitterException(AppException):
+    pass
 
 
 class ReadOnlyTwitterApi:
@@ -197,16 +203,19 @@ class TwitterActor(object):
         returns:
             tuple of (direct message list, menetion list)
         """
-        # I use list comprehensions since I suspect that these methods return iterators
-        # reversing the lists puts them in chronological order
-        directs = [m for m in self.__twitter.GetDirectMessages()]
-        directs.reverse()
+        try:
+            # I use list comprehensions since I suspect that these methods return iterators
+            # reversing the lists puts them in chronological order
+            directs = [m for m in self.__twitter.GetDirectMessages()]
+            directs.reverse()
         
-        mentions = [r for r in self.__twitter.GetReplies()]
-        mentions.reverse()
+            mentions = [r for r in self.__twitter.GetReplies()]
+            mentions.reverse()
         
-        return directs, mentions
-        
+            return directs, mentions
+        except HTTPError, e:
+            raise TwitterException(e)
+            
     def respond(self):
         directs, mentions = self.messages()
 

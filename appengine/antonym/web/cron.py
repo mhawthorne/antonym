@@ -19,6 +19,10 @@ from katapult.log import basic_config
 from katapult.requests import monitor_request, RequestHelper
 
 
+def set_error_status(helper):
+    helper.set_status(204)
+
+
 class CronTwitterActorHandler(webapp.RequestHandler):
 
     # in most frequent case, tweets will be 10 minutes apart
@@ -48,6 +52,7 @@ class SafeTwitterActorHandler(webapp.RequestHandler):
             msg = Exceptions.format_last()
             logging.error(msg)
             result = (e, msg)
+            set_error_status(RequestHelper(self))
         return result
 
 

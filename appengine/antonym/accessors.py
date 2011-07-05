@@ -233,6 +233,11 @@ class ArtifactAccessor:
         # TODO: tweak result limit
         return [c for c in ArtifactContent.all().search(term).fetch(max_results)]
 
+    @classmethod
+    @caching.cache_return_by_argument_key(lambda *args, **kw: "artifact:newer=%s" % str(args))
+    def find_newer(cls, timestamp, **kw):
+        return ArtifactInfo.find_newer(timestamp, **kw)
+
 
 class FeedAccessor:
     
@@ -241,7 +246,7 @@ class FeedAccessor:
     def get_by_source_name(cls, source_name, **kw):
         return Feed.get_by_source_name(source_name, **kw)
 
-
+    
 class TwitterResponseAccessor:
     
     @classmethod
