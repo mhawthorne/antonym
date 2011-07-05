@@ -92,6 +92,11 @@ def feed_service
 end
 
 
+namespace :cron do
+  
+end
+
+
 namespace :artifact do
   
   desc "loads each line in a file as an artifact"

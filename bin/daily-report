@@ -1,0 +1,29 @@
+#!/bin/sh -e
+
+# creates daily report for antonym
+#
+# stats to include:
+# ingested articles
+# mentions
+# direct msgs in
+# tweets out
+# direct msgs out
+
+# if [ $# -ne 1 ]; then
+#   echo "USAGE: daily-report <source_uri>"
+#   exit 1
+# fi
+
+logs=/tmp/antonym-http.log
+rake fetch_logs out=$logs
+
+echo "[request paths]"
+cut -f 7,9 -d " " $logs | sort | uniq -c | sort -rn
+echo
+
+echo "[errors]"
+echo `grep "cron 204" $logs`
+echo
+
+echo "[stats]"
+(cd inquirer; rake http m=get p=/api/private/stats)
