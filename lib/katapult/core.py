@@ -135,6 +135,9 @@ class KeyCounter:
     def iteritems(self):
         return self.__hash.iteritems()
 
+    def to_hash(self):
+        return self.__hash
+        
     def __repr__(self):
         return repr(self.__hash)
 

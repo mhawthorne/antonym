@@ -33,8 +33,7 @@ def new_speaker(speaker_alias='s'):
         raise IllegalArgumentException("speaker not found: '%s'" % speaker_alias)
     return speaker_alias, _speaker_aliases[speaker_alias]()
 
-# TODO: is this causing our memory leak?  module caching is causing the nx graph to stay in memory?
-_speakers_weighted = (("s-r", 1), ("nx-r", 4), ("m2-r", 5))
+_speakers_weighted = (("s-r", 9), ("m2-r", 1))
 
 def new_random_speaker():
     return new_speaker(select_weighted_with_replacement(_speakers_weighted))

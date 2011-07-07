@@ -47,6 +47,9 @@ def new_default_mixer():
 def describe_status(status):
     return "%s: %s" % (status.user.screen_name, status.text)
 
+def describe_status_with_timestamp(status):
+    return "[%s] %s: %s" % (status.created_at, status.user.screen_name, status.text)
+
 
 # general wrapper around Twitter exceptions
 class TwitterException(AppException):
@@ -186,6 +189,9 @@ class TwitterActor(object):
         speaker_name, speaker = new_random_speaker()
         logging.debug("selected speaker: %s" % speaker.__class__.__name__)
         return speaker
+    
+    def latest_statuses(self, count=None):
+        return self.__twitter.GetUserTimeline(count=count)
         
     def mix(self):
         """
@@ -198,7 +204,7 @@ class TwitterActor(object):
         self.__reporter.posted(content)
         return self.__twitter.PostUpdate(content)
         
-    def messages(self):
+    def messages(self, since=None):
         """
         returns:
             tuple of (direct message list, menetion list)
@@ -206,10 +212,10 @@ class TwitterActor(object):
         try:
             # I use list comprehensions since I suspect that these methods return iterators
             # reversing the lists puts them in chronological order
-            directs = [m for m in self.__twitter.GetDirectMessages()]
+            directs = [m for m in self.__twitter.GetDirectMessages(since=since)]
             directs.reverse()
         
-            mentions = [r for r in self.__twitter.GetReplies()]
+            mentions = [r for r in self.__twitter.GetReplies(since=since)]
             mentions.reverse()
         
             return directs, mentions

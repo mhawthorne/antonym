@@ -12,6 +12,7 @@ from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource, Configu
 
 from katapult.accessors.counters import Counter
 from katapult.caching import decorators as caching
+from katapult.core import KeyCounter
 from katapult.log import LoggerFactory
 from katapult.models import Models
 
@@ -61,7 +62,21 @@ class ArtifactSourceAccessor:
     @classmethod
     def create(cls, source_name, **kw):
         return ArtifactSource.create(source_name, **kw)
+    
+    @classmethod    
+    def find_artifact_counts(cls, **kw):
+        counts = {}
+        for src in ArtifactSource.all():
+            c = Counters.source_counter(src.name)
+            counts[src.name] = c.count()
+        return counts
 
+    @classmethod    
+    def find_artifact_counts_newer(cls, datetime, **kw):
+        counts = KeyCounter()
+        for art in ArtifactInfo.find_newer(datetime, **kw):
+            counts.increment(art.source_name)
+        return counts.to_hash()
 
 class UrlResourceAccessor:
     

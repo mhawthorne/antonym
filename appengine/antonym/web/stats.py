@@ -7,8 +7,8 @@ from google.appengine.ext import webapp
 from katapult.reflect import get_full_class_name
 from katapult.requests import RequestHelper
 
-from antonym.accessors import ArtifactAccessor
-from antonym.ttwitter import TwitterActor, TwitterException
+from antonym.accessors import ArtifactAccessor, ArtifactSourceAccessor
+from antonym.ttwitter import describe_status_with_timestamp, TwitterActor, TwitterException
 
 
 class StatsHandler(webapp.RequestHandler):
@@ -21,30 +21,40 @@ class StatsHandler(webapp.RequestHandler):
         result['timestamp'] = str(datetime.now())
         result['today'] = str(today)
         
-        # artifacts
-        newer_arts = ArtifactAccessor.find_newer(today, refresh=True)
-        
-        art_stats = []
-        result['artifacts'] = art_stats
-        
         warnings = []
         result['warnings'] = warnings
         
-        for art in newer_arts:
-            art_stats.append(dict(guid=art.guid, source_name=art.source_name))
+        # source/artifact counts
+        result['source_artifact_counts'] = ArtifactSourceAccessor.find_artifact_counts()
+        
+        # new artifacts
+        result['new_artifacts'] = ArtifactSourceAccessor.find_artifact_counts_newer(today)
+        
+        # newer_arts = ArtifactAccessor.find_newer(today, refresh=True)
+        
+        # new_art_stats = []
+        # result['new_artifacts'] = new_art_stats
+                
+        # for art in newer_arts:
+        #     new_art_stats.append(dict(guid=art.guid, source_name=art.source_name))
         
         try:
-            # twitter
+            twactor = TwitterActor()
+            
+            # outgoing messages
+            result['statuses_out'] = [describe_status_with_timestamp(s) for s in twactor.latest_statuses(5)]
+            
+            # incoming messages
             direct_stats = []
             mention_stats = []
             result['directs'] = direct_stats
             result['mentions'] = mention_stats
         
-            directs, mentions = TwitterActor().messages()
-            for d in directs:
-                direct_stats.append(d)
-            
-            # for m in mentions:
+            directs, mentions = twactor.messages(today)
+            directs.reverse()
+            mentions.reverse()
+            direct_stats.extend([describe_status_with_timestamp(s) for s in directs])
+            mention_stats.extend([describe_status_with_timestamp(s) for s in mentions])
         except TwitterException, ex:
             warnings.append(str(ex))
 
