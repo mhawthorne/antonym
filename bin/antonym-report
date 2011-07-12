@@ -26,7 +26,11 @@ cut -f 7,9 -d " " $logs | sort | uniq -c | sort -rn
 echo
 
 echo "[errors]"
-echo `egrep "cron.*204" $logs`
+# using HTTP 205 as temporary error code for taskqueue jobs
+echo `egrep "cron.*205" $logs`
+
+# displays HTTP 4xx or 5xx responses
+echo `egrep " [45][0-9]{2} " $logs`
 echo
 
 echo "[stats]"
