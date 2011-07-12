@@ -14,6 +14,10 @@
 #   exit 1
 # fi
 
+if [ $# -eq 1 ]; then
+  cd $1
+fi
+
 logs=/tmp/antonym-http.log
 rake fetch_logs out=$logs
 
@@ -22,7 +26,7 @@ cut -f 7,9 -d " " $logs | sort | uniq -c | sort -rn
 echo
 
 echo "[errors]"
-echo `grep "cron 204" $logs`
+echo `egrep "cron.*204" $logs`
 echo
 
 echo "[stats]"
