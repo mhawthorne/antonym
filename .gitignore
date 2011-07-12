@@ -1,4 +1,4 @@
-.bulkloader-*
+*bulkloader*
 .DS_Store
 *.pyc
 .svn

@@ -105,19 +105,21 @@ class CronIngestDriverHandlerTest(TestCase):
 class CronIngestHandlerTest(TestCase):
     
     def test_post_handles_ingest_error(self):
-        mox = Mox()
-        request, response = new_mock_request_response(mox)
-        mox.StubOutWithMock(Feed, "get_by_source_name")
+        m = Mox()
+        request, response = new_mock_request_response(m)
+        m.StubOutWithMock(Feed, "get_by_source_name" )
         
+        request.get("keep").AndReturn(None)
         feed_name = "blah"
         Feed.get_by_source_name(feed_name, return_none=True).AndRaise(Exception("real bad"))
-        
+
+        # response.set_status(200)
+
+        m.ReplayAll()
         handler = CronIngestHandler()
         handler.initialize(request, response)
-        
-        mox.ReplayAll()        
         _assert_handles_error(lambda: handler.post(feed_name))
-        mox.VerifyAll()
+        m.VerifyAll()
 
 
 if __name__ == "__main__":

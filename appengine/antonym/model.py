@@ -186,6 +186,17 @@ class ArtifactInfo(db.Model):
     def find_newer(cls, datetime, **kw):
         return cls.all(**kw).filter("modified > ", datetime)
 
+    @classmethod
+    def find_by_source_in_reverse_modified_order(cls, source, **kw):
+        return cls.all(**kw).filter("source =", source).order("-modified_by")
+        
+    @classmethod
+    def delete_oldest_by_source(cls, source, keep_count, max_delete=500):
+        keys = cls.find_by_source_in_reverse_modified_order(source, keys_only=True).fetch(max_delete, keep_count)
+        key_names = [m.name() for m in keys]
+        db.delete(keys)
+        return key_names
+
 
 class ArtifactContent(search.SearchableModel):
 

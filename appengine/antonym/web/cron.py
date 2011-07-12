@@ -20,7 +20,7 @@ from katapult.requests import monitor_request, RequestHelper
 
 
 def set_error_status(helper):
-    helper.set_status(204)
+    helper.set_status(205)
 
 
 class CronTwitterActorHandler(webapp.RequestHandler):

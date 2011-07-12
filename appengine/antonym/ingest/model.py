@@ -43,5 +43,6 @@ def ingest_feed_entries(feed, user, error_call=None):
                 error_call(entry, e)
             else:
                 raise e
-                
+    
     # update etag and modified time of feed
+    

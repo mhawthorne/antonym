@@ -5,6 +5,9 @@ from mox import IgnoreArg, Mox
 from google.appengine.api import users
 from google.appengine.api.users import User
 
+from katapult.accessors.counters import Counter
+
+from antonym.accessors import Counters
 from antonym.ingest import model
 import antonym.model
 from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource, Feed
@@ -40,6 +43,8 @@ class IngestHandlerTest(TestCase):
         
         request, response = new_mock_request_response(moxer)
         moxer.StubOutWithMock(users, "get_current_user", use_mock_anything=True)
+        moxer.StubOutWithMock(ArtifactInfo, "delete_oldest_by_source", use_mock_anything=True)
+        moxer.StubOutWithMock(Counters, "source_counter")
         moxer.StubOutWithMock(Feed, "get_by_source_name", use_mock_anything=True)
         moxer.StubOutWithMock(model, "ingest_feed_entries")
         
@@ -51,7 +56,16 @@ class IngestHandlerTest(TestCase):
         handler = IngestHandler()
         users.get_current_user().AndReturn(user)
         handler.initialize(request, response)
-        feed = MockEntity(key_name=source_name, url="no")
+        request.get("keep").AndReturn(None)
+        
+        counter = moxer.CreateMock(Counter)
+        Counters.source_counter(source_name).AndReturn(counter)
+        counter.decrement(IgnoreArg())
+        
+        source = MockEntity(key_name=source_name, name=source_name)
+        feed = MockEntity(key_name=source_name, url="no", artifact_source=source)
+        ArtifactInfo.delete_oldest_by_source(source, IgnoreArg()).AndReturn([])
+        
         Feed.get_by_source_name(source_name, return_none=True).AndReturn(feed)
         model.ingest_feed_entries(feed, user, error_call=IgnoreArg()).AndReturn(())
         

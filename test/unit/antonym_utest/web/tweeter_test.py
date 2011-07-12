@@ -70,13 +70,19 @@ def _build_standard_config(moxer):
     ConfigurationAccessor.get_or_create().AndReturn(config)
     config.is_tweeting = None
     return config
+
+def _return_direct_messages(api, directs):
+    return api.GetDirectMessages(since=None).AndReturn(directs)
+
+def _return_replies(api, replies):
+    return api.GetReplies(since=None).AndReturn(replies)
     
 def _act_no_messages(api, moxer):
     moxer.StubOutWithMock(Mixer, "mix_random_limit_sources")
     
     # no messages
-    api.GetDirectMessages().AndReturn([])
-    api.GetReplies().AndReturn([])
+    _return_direct_messages(api, [])
+    _return_replies(api, [])
     
     sources = [MockEntity(key_name=str(i), name="source/%d" % i) for i in xrange(2)]
     content = "so, wtf is going on here"
@@ -88,10 +94,10 @@ def _random_tweet(selector):
     selector.select_action().AndReturn(ActionSelector.RANDOM_TWEET)
 
 def _no_direct_messages(api):
-    api.GetDirectMessages().AndReturn(())
+    _return_direct_messages(api, ())
 
 def _mentions(api, *messages):
-    api.GetReplies().AndReturn(messages)
+    _return_replies(api, messages)
     
 def _create_message(moxer, msg_id, username, text):
     msg = moxer.CreateMock(twitter.Status)        
@@ -166,12 +172,12 @@ class TwitterActorTest(TestCase):
         direct.sender_screen_name = "mikemattozzi"
         direct.text = "why is blood spattered all over your car?"
         
-        api.GetDirectMessages().AndReturn([direct])
+        _return_direct_messages(api, [direct])
         
         post = moxer.CreateMockAnything()
         post.id = 101
         
-        api.GetReplies().AndReturn(())
+        _return_replies(api, ())
         TwitterResponseAccessor.get_by_message_id(str(direct_id))
         ArtifactAccessor.search("spattered").AndReturn(create_content_list(10))
         

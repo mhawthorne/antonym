@@ -19,11 +19,11 @@ from katapult.core import Exceptions
 from katapult.reflect import get_class
 from katapult.requests import RequestHelper
 
-from antonym.accessors import ArtifactAccessor, ArtifactSourceAccessor, UrlResourceAccessor
+from antonym.accessors import ArtifactAccessor, ArtifactSourceAccessor, Counters, UrlResourceAccessor
 from antonym.core import AppException, NotFoundException
 from antonym.ingest import model
 from antonym.ingest.feeds import generate_feed_entries
-from antonym.model import Feed
+from antonym.model import ArtifactInfo, Feed
 from antonym.web import read_json_fields, unicode_hash
 from antonym.web.services import require_service_user, Services
 
@@ -34,14 +34,22 @@ class IngestWebActor:
     def ingest(cls, handler, source_name):
         helper = RequestHelper(handler)
         source_name = urllib.unquote(source_name)
-    
+        
+        keep = handler.request.get("keep")
+        if keep:
+            keep = int(keep)
+        else:
+            keep = 100
+        
         # TODO: get from cache
         f = Feed.get_by_source_name(source_name, return_none=True)
         if not f:
             helper.error(404)
             return
     
-        results = []
+        results = {}
+        entries = []
+        results['created'] = entries
     
         # TODO: use etag from previous ingest
         error_call = lambda entry, ex: logging.error(Exceptions.format_last())
@@ -52,11 +60,16 @@ class IngestWebActor:
             user = User(Services.API_USER)
             
         for artifact_guid, entry, created in model.ingest_feed_entries(f, user, error_call=error_call):
-            results.append({ "artifact-guid": artifact_guid,
+            entries.append({ "artifact-guid": artifact_guid,
                 "url": entry.link,
                 "title": entry.title,
                 "created": created })
-            
+        
+        # delete oldest feed entries
+        deleted_key_names = ArtifactInfo.delete_oldest_by_source(f.artifact_source, keep)
+        results['deleted'] = deleted_key_names
+        Counters.source_counter(f.artifact_source.name).decrement(len(deleted_key_names))
+        
         helper.write_json(results)
 
 

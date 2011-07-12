@@ -25,17 +25,17 @@ class Counter:
             total += counter.count
         return total
         
-    def increment(self):
+    def increment(self, amount=1):
         def counter_call(c):
-            c.count += 1
+            c.count += amount
         self.__counter_tx(counter_call)
         return self
         
     # TODO: delete counter if decremented to zero
-    def decrement(self):
+    def decrement(self, amount=1):
         def counter_call(c):
             if c.count > 0: 
-                c.count -= 1
+                c.count -= amount
         self.__counter_tx(counter_call)
         return self
 
