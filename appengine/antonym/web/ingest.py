@@ -39,7 +39,7 @@ class IngestWebActor:
         if keep:
             keep = int(keep)
         else:
-            keep = 100
+            keep = 50
         
         # TODO: get from cache
         f = Feed.get_by_source_name(source_name, return_none=True)
@@ -59,16 +59,17 @@ class IngestWebActor:
             # there is no logged in user for cron requests
             user = User(Services.API_USER)
             
-        for artifact_guid, entry, created in model.ingest_feed_entries(f, user, error_call=error_call):
-            entries.append({ "artifact-guid": artifact_guid,
-                "url": entry.link,
-                "title": entry.title,
-                "created": created })
-        
-        # delete oldest feed entries
-        deleted_key_names = ArtifactInfo.delete_oldest_by_source(f.artifact_source, keep)
-        results['deleted'] = deleted_key_names
-        Counters.source_counter(f.artifact_source.name).decrement(len(deleted_key_names))
+        try:
+            for artifact_guid, entry, created in model.ingest_feed_entries(f, user, error_call=error_call):
+                entries.append({ "artifact-guid": artifact_guid,
+                    "url": entry.link,
+                    "title": entry.title,
+                    "created": created })
+        finally:
+            # delete oldest feed entries
+            deleted_key_names = ArtifactInfo.delete_oldest_by_source(f.artifact_source, keep)
+            results['deleted'] = deleted_key_names
+            Counters.source_counter(f.artifact_source.name).decrement(len(deleted_key_names))
         
         helper.write_json(results)
 

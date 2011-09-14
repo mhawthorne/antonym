@@ -1,10 +1,12 @@
 cron:
 - description: auto-act
   url: /cron/twitter/act
-  schedule: every 30 minutes
+#  schedule: every 30 minutes
+  schedule: every day 00:00
   timezone: America/New_York
   
 - description: ingest
   url: /cron/ingest
-  schedule: every 2 hours
+#  schedule: every 2 hours
+  schedule: every day 00:00
   timezone: America/New_York
