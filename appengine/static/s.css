@@ -9,6 +9,8 @@
 
 .livelock {
     color: rgb(255,0,40);
+    background: rgb(240,240,240);
+    padding: 0.2em 0 0.2em 0;
 }
 
 .user {
@@ -22,17 +24,35 @@ body {
 
 input {
     border: 1px solid rgb(220,220,220);
-    padding: 0.2em;
-    width: 80%;
+    width: 100%;
 }
 
-img {
-    margin-bottom: 1em;
+
+div#top {
+  text-align: center;
+  height: 2em;
 }
 
+span#loading {
+/*  visibility: hidden;*/
+}
+
+div#image {
+  _text-align: center;
+  float: left;
+}
+
+div#conversation {
+  float: right;
+  width: 60%;
+}
+
+div#image p {
+  margin: 0 0 1em 0;
+}
 
 div#wrapper {
-    width: 40%;
+    width: 60%;
     margin: 1em auto 1em auto;
 }
 
@@ -44,7 +64,7 @@ div#messages {
 }
 
 div#messages p {
-    margin: 1em 0 1em 0;
+  margin: 0 0 1em 0;
 }
 
 div#form {

@@ -7,9 +7,14 @@
 
 var _imgIdx = 0
 var _images = [ "http://farm5.static.flickr.com/4030/4339301211_ac39f8999d_m.jpg",
-    "http://farm5.static.flickr.com/4070/4430963908_2634f15896_m.jpg" ]
+    "http://farm5.static.flickr.com/4070/4430963908_2634f15896_m.jpg", 
+    "http://farm5.static.flickr.com/4143/4751323580_02dc80b1b6_m.jpg" ]
 
 var _counter = 1
+
+// defines how many messages after which the image is toggled
+var _toggleCount = 2
+
 
 function _add(text, cssClass, fade) {
     var tag = $('<p class="' + cssClass + '">' + text + '</p>')
@@ -34,40 +39,56 @@ function _livelock(text) {
 }
 
 function _count() {
-    if (_counter % 10 == 0)
+    if (_counter % _toggleCount == 0)
         _toggleImage()
     
     _counter++
 }
 
-function _toggleImage() {
-    if (_imgIdx == 0)
-        _imgIdx = 1
-    else if (_imgIdx == 1)
-        _imgIdx = 0
+function _getLoadingTag() {
+    return $("span#loading")
+}
 
-    var newImg = new Image()
-    var imgUrl = _images[_imgIdx]
-    // _livelock(imgUrl)
-    newImg.src = imgUrl
-    var img = $("img")
-    img.css("display", "none")
-    img.attr("src", newImg.src)
-    // _livelock(img.src)
-    img.fadeIn("slow")
+function _showLoading() {
+    _getLoadingTag().fadeIn("fast")
+}
+
+function _hideLoading() {
+    _getLoadingTag().fadeOut(1000)
+}
+
+function _toggleImage() {
+    var newIdx = _imgIdx
+    while(newIdx == _imgIdx) {
+        newIdx = Math.round(Math.random() * (_images.length-1))
+    }
+
+    _imgIdx = newIdx
+    
+    $("img#logo").fadeOut("fast", function() {
+        var newImg = new Image()
+        var imgUrl = _images[_imgIdx]
+        newImg.src = imgUrl
+        
+        var img = $(this)
+        img.attr("src", newImg.src)
+        img.fadeIn(2000)
+    })
 }
 
 $(document).ready(function() {
+    _hideLoading();
+    
     input = $("input")
     
     $("form").submit(function(e) {
         var text = input.val()
         _user(text)
+        input.val("")
         
         var successCall = function(data) {
             _livelock(data.body)
             _count()
-            input.val("")
         }
         
         var errorCall = function(request, status, e) {
@@ -81,7 +102,13 @@ $(document).ready(function() {
             success: successCall,
             error: errorCall,
             dataType: "json",
+            complete: function(xhr, status) {
+                _hideLoading();
+            }
         }
+        
+        _showLoading()
+        
         $.ajax(options)
         
         return false
@@ -94,15 +121,25 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block content %}
+{% block content %}    
     <div id="image">
-        <img src="http://farm5.static.flickr.com/4030/4339301211_ac39f8999d_m.jpg" alt="livelock"/>
+        <p>
+            <a href="http://twitter.com/livelock" title="livelock">http://twitter.com/livelock</a>
+        </p>
+        
+        <p>
+            <img id="logo" src="http://farm5.static.flickr.com/4030/4339301211_ac39f8999d_m.jpg" alt="livelock"/>
+        </p>
+        
+        <div id="top">
+            <span id="loading"><img src="/static/spinner.gif" alt="spinner"></span>
+        </div>
     </div>
     
     <div id="conversation">
         <div id="messages"></div>
         
-        <p class="clear"></p>
+        <!-- <p class="clear"></p> -->
         
         <div id="form">
             <form>

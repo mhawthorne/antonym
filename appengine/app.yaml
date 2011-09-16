@@ -43,15 +43,18 @@ handlers:
 - url: /-/debug/.+
   script: antonym/web/debug.py
  
-- url: /(index.html)?
-  static_files: static/index.html
-  upload: /static/index.html
+# - url: /(index.html)?
+#   static_files: static/index.html
+#   upload: /static/index.html
 
 - url: /-/oauth
   script: antonym/web/ooauth.py
 
 # django
 - url: /-/.*
+  script: antonym_dj/main.py
+
+- url: /.*
   script: antonym_dj/main.py
 
 admin_console:
