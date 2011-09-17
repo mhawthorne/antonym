@@ -67,6 +67,7 @@ class IngestWebActor:
                     "created": created })
         finally:
             # delete oldest feed entries
+            # TODO: shouldn't I be deleting ArtifactContent instances also?
             deleted_key_names = ArtifactInfo.delete_oldest_by_source(f.artifact_source, keep)
             results['deleted'] = deleted_key_names
             Counters.source_counter(f.artifact_source.name).decrement(len(deleted_key_names))

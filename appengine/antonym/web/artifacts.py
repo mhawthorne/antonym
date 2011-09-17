@@ -187,24 +187,23 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
       results["deleted"] = deleted_guids
       errors = 0
       q_results = ArtifactContent.all().search(q)
-      contents = [c for c in q_results]
       
       infos = []
-      for c in contents:
-        try:
-          if c.info is not None:
-            infos.append(c.info)
-        except Exception, ex:
-          errors += 1
-          
-      db.delete(contents)
-      db.delete(infos)
-
+      batch_size = 100
+      q_count = q_results.count()
+      batches = (q_count / batch_size) + 1
       count = 0
-      for c in contents:
-        deleted_guids.append(c.guid)
-        count += 1
-        
+      for i in range(0, batches):
+        for c in q_results.fetch(batch_size, i * batch_size):
+          try:
+            c.delete()
+            count += 1
+            deleted_guids.append(c.guid)
+            if c.info is not None:
+              c.info.delete()              
+          except Exception, ex:
+            errors += 1
+              
       results["deleted_count"] = count
       results["errors"] = errors
 
