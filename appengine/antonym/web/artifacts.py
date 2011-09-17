@@ -118,7 +118,7 @@ class ArtifactsHelper:
         
         if artifact_info is not None:
           artifact_hash['guid'] = artifact_info.guid
-          artifact_hash['source'] = artifact_info.source.name
+          artifact_hash['source'] = artifact_info.source_name
           artifact_hash['content-type'] = artifact_info.content_type
           artifact_hash['modified'] = artifact_info.modified.isoformat()
           artifact_hash['modified-by'] = artifact_info.modified_by.email()
@@ -127,7 +127,10 @@ class ArtifactsHelper:
             artifact_hash["url"] = artifact_info.url
             
         if artifact_content is not None:
+          artifact_hash['guid'] = artifact_content.guid
+          artifact_hash['source'] = artifact_content.source_name
           artifact_hash['body'] = artifact_content.body
+          artifact_hash['modified'] = artifact_content.modified.isoformat()
           
         return artifact_hash
 
