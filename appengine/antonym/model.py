@@ -188,7 +188,7 @@ class ArtifactInfo(db.Model):
 
     @classmethod
     def find_by_source_in_reverse_modified_order(cls, source, **kw):
-        return cls.all(**kw).filter("source =", source).order("-modified_by")
+        return cls.all(**kw).filter("source =", source).order("-modified")
         
     @classmethod
     def delete_oldest_by_source(cls, source, keep_count, max_delete=500):
@@ -223,6 +223,25 @@ class ArtifactContent(search.SearchableModel):
     @classmethod
     def find_by_source(cls, source):
         return cls.all().filter("source =", source)
+        
+    @classmethod
+    def find_by_source_in_reverse_modified_order(cls, source, **kw):
+        return cls.all(**kw).filter("source =", source).order("-modified")
+        
+    @classmethod
+    def delete_oldest_by_source(cls, source, keep_count, pre_call=None, max_delete=500):
+        models = cls.find_by_source_in_reverse_modified_order(source).fetch(max_delete, keep_count)
+        key_names = []
+        for m in models:
+          try:
+            key_name = m.key().name()
+            if pre_call:
+              pre_call(m)
+            m.delete()
+            key_names.append(key_name)
+          except Exception, e:
+            logging.error(e)
+        return key_names
 
     def __repr__(self):
         return "%s(guid=%s, source=%s, body=%s)" % \

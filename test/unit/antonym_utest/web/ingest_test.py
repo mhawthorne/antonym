@@ -43,7 +43,8 @@ class IngestHandlerTest(TestCase):
         
         request, response = new_mock_request_response(moxer)
         moxer.StubOutWithMock(users, "get_current_user", use_mock_anything=True)
-        moxer.StubOutWithMock(ArtifactInfo, "delete_oldest_by_source", use_mock_anything=True)
+        # moxer.StubOutWithMock(ArtifactInfo, "delete_oldest_by_source", use_mock_anything=True)
+        moxer.StubOutWithMock(ArtifactContent, "delete_oldest_by_source")
         moxer.StubOutWithMock(Counters, "source_counter")
         moxer.StubOutWithMock(Feed, "get_by_source_name", use_mock_anything=True)
         moxer.StubOutWithMock(model, "ingest_feed_entries")
@@ -64,7 +65,8 @@ class IngestHandlerTest(TestCase):
         
         source = MockEntity(key_name=source_name, name=source_name)
         feed = MockEntity(key_name=source_name, url="no", artifact_source=source)
-        ArtifactInfo.delete_oldest_by_source(source, IgnoreArg()).AndReturn([])
+        # ArtifactInfo.delete_oldest_by_source(source, IgnoreArg()).AndReturn([])
+        ArtifactContent.delete_oldest_by_source(source, IgnoreArg(), pre_call=IgnoreArg()).AndReturn([])
         
         Feed.get_by_source_name(source_name, return_none=True).AndReturn(feed)
         model.ingest_feed_entries(feed, user, error_call=IgnoreArg()).AndReturn(())

@@ -23,7 +23,7 @@ from antonym.accessors import ArtifactAccessor, ArtifactSourceAccessor, Counters
 from antonym.core import AppException, NotFoundException
 from antonym.ingest import model
 from antonym.ingest.feeds import generate_feed_entries
-from antonym.model import ArtifactInfo, Feed
+from antonym.model import ArtifactContent, ArtifactInfo, Feed
 from antonym.web import read_json_fields, unicode_hash
 from antonym.web.services import require_service_user, Services
 
@@ -68,7 +68,16 @@ class IngestWebActor:
         finally:
             # delete oldest feed entries
             # TODO: shouldn't I be deleting ArtifactContent instances also?
-            deleted_key_names = ArtifactInfo.delete_oldest_by_source(f.artifact_source, keep)
+            def delete_info(c):
+              try:
+                i = c.info
+                if i:
+                  i.delete()
+              except Exception, e:
+                pass
+                
+            deleted_key_names = ArtifactContent.delete_oldest_by_source(f.artifact_source, keep, pre_call=delete_info)
+            
             results['deleted'] = deleted_key_names
             Counters.source_counter(f.artifact_source.name).decrement(len(deleted_key_names))
         

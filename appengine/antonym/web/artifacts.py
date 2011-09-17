@@ -163,16 +163,24 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
     def get(self, **kw):
         helper = RequestHelper(self)
         q = self.request.get("q", None)
+        short = self.request.get("short", None)
+        
         if not q:
             helper.error(400, "q not provided.")
             return
 
         q_results = ArtifactContent.all().search(q)
-        json_results = []
-        if q_results.count():
-            for content in q_results.fetch(10):
-                info = ArtifactInfo.get_by_guid(content.guid)
-                json_results.append(ArtifactsHelper.artifact_to_hash(info, content))
+
+        json_results = None
+        if short:
+          json_results = {}
+          json_results["count"] = q_results.count()
+        else:
+          json_results = []
+          if q_results.count():
+              for content in q_results.fetch(10):
+                  info = ArtifactInfo.get_by_guid(content.guid)
+                  json_results.append(ArtifactsHelper.artifact_to_hash(info, content))
         helper.write_json(json_results)
 
     def delete(self, **kw):
@@ -189,13 +197,14 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
       q_results = ArtifactContent.all().search(q)
       
       infos = []
-      batch_size = 100
+      batch_size = 50
       q_count = q_results.count()
       batches = (q_count / batch_size) + 1
       count = 0
       for i in range(0, batches):
         for c in q_results.fetch(batch_size, i * batch_size):
           try:
+            logging.delete("deleting guid:%s" % c.guid)
             c.delete()
             count += 1
             deleted_guids.append(c.guid)
