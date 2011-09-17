@@ -46,7 +46,6 @@ class SourceHandler(webapp.RequestHandler):
         helper.set_status(204)
             
     def delete(self, name, **kw):
-        logging.debug("delete")
         helper = RequestHelper(self)
         try:
             ArtifactSourceAccessor.delete_by_name(name)

@@ -3,7 +3,7 @@ import urllib
 
 from google.appengine.api import users
 from google.appengine.api.users import User
-from google.appengine.ext import webapp
+from google.appengine.ext import db, webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 import simplejson as json
@@ -110,14 +110,25 @@ class ArtifactsHelper:
 
     @classmethod
     def artifact_to_hash(cls, artifact_info, artifact_content):
-        artifact_hash = {'guid': artifact_info.guid,
-            'source': artifact_info.source.name,
-            'content-type': artifact_info.content_type,
-            'modified': artifact_info.modified.isoformat(),
-            'modified-by': artifact_info.modified_by.email(),
-            'body': artifact_content.body }
-        if artifact_info.url:
+        # in theory neither info or content should be None,
+        # but I'm dealing with a bug where infos were deleted for a source,
+        # but content was not
+        
+        artifact_hash = {}
+        
+        if artifact_info is not None:
+          artifact_hash['guid'] = artifact_info.guid
+          artifact_hash['source'] = artifact_info.source.name
+          artifact_hash['content-type'] = artifact_info.content_type
+          artifact_hash['modified'] = artifact_info.modified.isoformat()
+          artifact_hash['modified-by'] = artifact_info.modified_by.email()
+          
+          if artifact_info.url:
             artifact_hash["url"] = artifact_info.url
+            
+        if artifact_content is not None:
+          artifact_hash['body'] = artifact_content.body
+          
         return artifact_hash
 
     @classmethod
@@ -160,6 +171,18 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
                 info = ArtifactInfo.get_by_guid(content.guid)
                 json_results.append(ArtifactsHelper.artifact_to_hash(info, content))
         helper.write_json(json_results)
+
+    def delete(self, **kw):
+      helper = RequestHelper(self)
+      q = self.request.get("q", None)
+      if not q:
+          helper.error(400, "q not provided.")
+          return
+
+      contents = ArtifactContent.all().search(q)
+      infos = [c.info for c in contents]
+      for pair in zip(infos, contents):
+        db.delete(pair)
 
 
 class ArtifactHandler(webapp.RequestHandler):
