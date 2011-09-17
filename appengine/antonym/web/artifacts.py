@@ -179,13 +179,36 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
       helper = RequestHelper(self)
       q = self.request.get("q", None)
       if not q:
-          helper.error(400, "q not provided.")
-          return
+        helper.error(400, "q not provided.")
+        return
 
-      contents = ArtifactContent.all().search(q)
-      infos = [c.info for c in contents]
-      for pair in zip(infos, contents):
-        db.delete(pair)
+      results = {}
+      deleted_guids = []
+      results["deleted"] = deleted_guids
+      errors = 0
+      q_results = ArtifactContent.all().search(q)
+      contents = [c for c in q_results]
+      
+      infos = []
+      for c in contents:
+        try:
+          if c.info is not None:
+            infos.append(c.info)
+        except Exception, ex:
+          errors += 1
+          
+      db.delete(contents)
+      db.delete(infos)
+
+      count = 0
+      for c in contents:
+        deleted_guids.append(c.guid)
+        count += 1
+        
+      results["deleted_count"] = count
+      results["errors"] = errors
+
+      helper.write_json(results)
 
 
 class ArtifactHandler(webapp.RequestHandler):
