@@ -8,5 +8,5 @@ cron:
 - description: ingest
   url: /cron/ingest
 #  schedule: every 2 hours
-  schedule: every day 00:00
+  schedule: every 12 hours
   timezone: America/New_York
