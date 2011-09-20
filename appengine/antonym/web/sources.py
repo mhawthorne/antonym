@@ -13,7 +13,11 @@ from antonym.web.services import require_service_user
 
 def source_hash(source):
     c = Counters.source_counter(source.name)
-    return {'name': source.name, 'count': c.count()}
+    return { 'name': source.name,
+            'count': c.count(),
+            'content-count': ArtifactSourceAccessor.count_content(source),
+            'info-count': ArtifactSourceAccessor.count_infos(source)
+            }
     
     
 class SourcesHandler(webapp.RequestHandler):

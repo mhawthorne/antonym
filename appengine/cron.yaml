@@ -2,7 +2,7 @@ cron:
 - description: auto-act
   url: /cron/twitter/act
 #  schedule: every 30 minutes
-  schedule: every day 00:00
+  schedule: every 15 minutes
   timezone: America/New_York
   
 - description: ingest

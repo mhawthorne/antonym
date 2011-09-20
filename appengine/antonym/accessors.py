@@ -56,6 +56,16 @@ class ArtifactSourceAccessor:
         for artifact_keys in zip(info_keys, content_keys):
             db.delete(artifact_keys)
         
+        # deletes extras if info/content sizes don't match
+        # (this would be a data bug somewhere)
+        content_len = len(content_keys)
+        info_len = len(info_keys)
+        if content_len < info_len:
+          db.delete(content_keys[info_len:])
+        elif info_len > content_len:
+          db.delete(info_keys[content_len:])
+          
+      
         # deletes source
         db.delete(source)
 
@@ -77,6 +87,17 @@ class ArtifactSourceAccessor:
         for art in ArtifactInfo.find_newer(datetime, **kw):
             counts.increment(art.source_name)
         return counts.to_hash()
+
+    @classmethod
+    @caching.cache_return_by_argument_key(lambda *args, **kw: "source:content-count:%s" % args[1])
+    def count_content(cls, source):
+        return ArtifactContent.find_by_source(source, keys_only=True).count()
+
+    @classmethod
+    @caching.cache_return_by_argument_key(lambda *args, **kw: "source:info-count:%s" % args[1])
+    def count_infos(cls, source):
+        return ArtifactInfo.find_by_source(source, keys_only=True).count()
+
 
 class UrlResourceAccessor:
     

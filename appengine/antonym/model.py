@@ -221,12 +221,12 @@ class ArtifactContent(search.SearchableModel):
         return cls.get_by_key_name(guid)
 
     @classmethod
-    def find_by_source(cls, source):
+    def find_by_source(cls, source, **kw):
         return cls.all().filter("source =", source)
         
     @classmethod
     def find_by_source_in_reverse_modified_order(cls, source, **kw):
-        return cls.all(**kw).filter("source =", source).order("-modified")
+        return cls.all().filter("source =", source).order("-modified")
         
     @classmethod
     def delete_oldest_by_source(cls, source, keep_count, pre_call=None, max_delete=500):

@@ -163,7 +163,7 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
     def get(self, **kw):
         helper = RequestHelper(self)
         q = self.request.get("q", None)
-        short = self.request.get("short", None)
+        output = self.request.get("o", None)
         
         if not q:
             helper.error(400, "q not provided.")
@@ -172,7 +172,7 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
         q_results = ArtifactContent.all().search(q)
 
         json_results = None
-        if short:
+        if output == "short":
           json_results = {}
           json_results["count"] = q_results.count()
         else:
@@ -204,13 +204,14 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
       for i in range(0, batches):
         for c in q_results.fetch(batch_size, i * batch_size):
           try:
-            logging.delete("deleting guid:%s" % c.guid)
+            logging.debug("deleting guid:%s" % c.guid)
             c.delete()
             count += 1
             deleted_guids.append(c.guid)
             if c.info is not None:
               c.info.delete()              
           except Exception, ex:
+            logging.error(ex)
             errors += 1
               
       results["deleted_count"] = count
