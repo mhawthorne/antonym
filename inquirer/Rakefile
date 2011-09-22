@@ -178,6 +178,15 @@ task :http do
   body = get_env('b', :no)
   body = nil if body == :no
   
+  if body =~ /^@/
+    # body is a file
+    open(body[1..-1]) do |stream|
+      body = stream.read
+    end
+  end
+  
+  puts "body:\n#{body}"
+  
   config = load_config()
   svc = Antonym::GenericService.new(config)
   method_sym = method.to_sym

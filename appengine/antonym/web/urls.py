@@ -8,7 +8,7 @@ from katapult.reflect import create_decorated_class, decorate_class
 from katapult.security import forbidden
 
 from antonym.web.activity import ActivityLogHandler
-from antonym.web.artifacts import ArtifactHandler, ArtifactsHandler, ArtifactsSearchHandler
+from antonym.web.artifacts import ArtifactBulkDeleteHandler, ArtifactHandler, ArtifactsHandler, ArtifactsSearchHandler
 from antonym.web.config import ConfigHandler
 from antonym.web.feeds import FeedHandler, FeedsHandler
 from antonym.web.ingest import IngestHandler, IngestParseHandler
@@ -41,6 +41,7 @@ def build_path_list():
         ("activity", ActivityLogHandler, None),
         ("artifacts", ArtifactsHandler, allow_public_writes),
         ("artifacts/-/search", ArtifactsSearchHandler, None),
+        ("artifacts/-/delete", ArtifactBulkDeleteHandler, None),
         ("artifacts/(.+)", ArtifactHandler, allow_public_writes),
         ('config/?([^/]+)?', ConfigHandler, None),
         ("feeds", FeedsHandler, None),

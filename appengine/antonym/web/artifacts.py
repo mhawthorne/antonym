@@ -158,6 +158,46 @@ class ArtifactsHandler(webapp.RequestHandler):
         helper.write_json(json_results)
 
 
+class ArtifactBulkDeleteHandler(webapp.RequestHandler):
+    """ I wanted this to be in the DELETE method for ArtifactsHandler, but a client limitation currently prevents it """
+    
+    def post(self):
+        helper = RequestHelper(self)
+        
+        json_body = self.request.body
+        if not json_body:
+            helper.error(400, "body required")
+            return
+            
+        decoded_body = urllib.unquote(json_body)
+        try:
+            body_hash = json.loads(decoded_body)
+        except json.JSONDecodeError, e:
+            msg = "malformed json: %s" % decoded_body
+            helper.error(400, msg)
+            logging.info(msg)
+            return
+        
+        ids = body_hash.get("ids", None)
+        if not ids:
+            msg = "no 'ids' field provided in JSON"
+            helper.error(400, msg)
+            logging.info(msg)
+            return
+
+        logging.info("deleting %s artifact(s)" % len(ids))
+
+        contents = [c for c in ArtifactContent.get_by_key_name(ids) if c is not None]
+        logging.info("deleting %s ArtifactContent instances" % len(contents))
+        db.delete(contents)
+            
+        infos = [i for i in ArtifactInfo.get_by_key_name(ids) if i is not None]
+        logging.info("deleting %s ArtifactInfo instances" % len(infos))
+        db.delete(infos)
+    
+        helper.set_status(204)
+
+
 class ArtifactsSearchHandler(webapp.RequestHandler):
     
     def get(self, **kw):
