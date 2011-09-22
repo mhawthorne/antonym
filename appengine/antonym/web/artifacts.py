@@ -164,6 +164,7 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
         helper = RequestHelper(self)
         q = self.request.get("q", None)
         output = self.request.get("o", None)
+        max_results = int(self.request.get("max", -1))
         
         if not q:
             helper.error(400, "q not provided.")
@@ -173,14 +174,22 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
 
         json_results = None
         if output == "short":
-          json_results = {}
-          json_results["count"] = q_results.count()
+            json_results = {}
+            json_results["count"] = q_results.count()
+        elif output == "id":
+            json_results = {}
+            json_results["count"] = q_results.count()
+            ids = []
+            json_results["ids"] = ids
+            fetch = lambda: q_results.fetch(1000) if max_results == -1 else lambda: q_results.fetch(max_results)
+            for c in fetch():
+                ids.append(c.guid)
         else:
-          json_results = []
-          if q_results.count():
-              for content in q_results.fetch(10):
-                  info = ArtifactInfo.get_by_guid(content.guid)
-                  json_results.append(ArtifactsHelper.artifact_to_hash(info, content))
+            json_results = []
+            if q_results.count():
+                for content in q_results.fetch(10):
+                    info = ArtifactInfo.get_by_guid(content.guid)
+                    json_results.append(ArtifactsHelper.artifact_to_hash(info, content))
         helper.write_json(json_results)
 
     def delete(self, **kw):
