@@ -74,7 +74,7 @@ class TwitterFriendHandler(webapp.RequestHandler):
         """ follows the specified user """
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        t_api.CreateFriendship(username)
+        t_api.createFriendship(username)
         helper.set_status(204)
         
     @require_service_user()
@@ -82,7 +82,7 @@ class TwitterFriendHandler(webapp.RequestHandler):
         """ unfollows the specified user """
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        t_api.DestroyFriendship(username)
+        t_api.destroyFriendship(username)
         helper.set_status(204)
 
 

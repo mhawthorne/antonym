@@ -10,10 +10,11 @@ from katapult.mocks import Mock, MockEntity, MockQuery
 from antonym.accessors import ArtifactAccessor, ConfigurationAccessor, TwitterResponseAccessor
 from antonym.mixer import Mixer
 from antonym.model import ArtifactContent, Configuration, TwitterResponse
-from antonym.web.tweeter import ActionSelector, TwitterActor, TwitterConnector
+from antonym.web.tweeter import ActionSelector, TwitterActor, TwitterConnector, TwitterFriendHandler
 from antonym.ttwitter import TweetAnalyzer
 
 from antonym_utest.text import create_content_list
+from antonym_utest.web import new_mock_request_response, set_api_user
 
 
 class Absorber:
@@ -369,6 +370,34 @@ class TwitterActorTest(TestCase):
         moxer.VerifyAll()
 
 
+class TwitterFriendHandlerTest(TestCase):
+    
+    def setUp(self):
+        self.m = Mox()
+        
+    def tearDown(self):
+        self.m.UnsetStubs()
+    
+    def test_put_friend(self):
+        request, response = new_mock_request_response(self.m)
+        self.m.StubOutWithMock(TwitterConnector, "new_api")
+        
+        api = _create_api(self.m)
+        TwitterConnector.new_api().AndReturn(api)
+        
+        username = "mhawthorne"
+        api.createFriendship(username)
+        response.set_status(204)
+        
+        handler = TwitterFriendHandler()
+        handler.initialize(request, response)
+        set_api_user(self.m)        
+        
+        self.m.ReplayAll()
+        handler.put(username)
+        self.m.VerifyAll()
+        
+        
 if __name__ == '__main__':
     basic_config()
     main()
