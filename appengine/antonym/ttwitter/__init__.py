@@ -408,7 +408,7 @@ class TwitterMemcache(object):
         self.__log("get %s" % key)
 
     def Set(self,key,data):
-        self.__log("set %s %s" % (key, data)
+        self.__log("set %s %s" % (key, data))
         pass
 
     def Remove(self,key):
