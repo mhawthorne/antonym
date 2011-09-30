@@ -34,7 +34,7 @@ class TwitterFollowersHandler(webapp.RequestHandler):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
         
-        filtered_followers = ([user_hash(u) for u in t_api.getFollowers()])
+        filtered_followers = ([user_hash(u) for u in t_api.GetFollowers()])
         if ff_ratio:
             filtered_followers = filter(lambda u: u['follower-to-friend-ratio'] > float(ff_ratio), 
                 filtered_followers)
@@ -49,7 +49,7 @@ class TwitterFriendsHandler(webapp.RequestHandler):
     def get(self):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        friends = sorted_user_list([user_hash(u) for u in t_api.getFriends()])
+        friends = sorted_user_list([user_hash(u) for u in t_api.GetFriends()])
         helper.write_json(friends)
 
 
