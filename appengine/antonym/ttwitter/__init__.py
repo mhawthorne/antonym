@@ -404,18 +404,18 @@ class TwitterMemcache(object):
     def __log(self, msg):
         logging.debug("[%s] %s" % (self.__class__.__name__, msg))
 
-    def get(self,key,account_specific):
+    def Get(self,key,account_specific):
         self.__log("get %s %s" % (key, account_specific))
 
-    def set(self,key,data,account_specific):
+    def Set(self,key,data,account_specific):
         self.__log("set %s %s %s" % (key, data, account_specific))
         pass
 
-    def remove(self,key,account_specific):
+    def Remove(self,key,account_specific):
         self.__log("remove %s %s" % (key, account_specific))
         pass
 
-    def getCachedTime(self,key,account_specific):
+    def GetCachedTime(self,key,account_specific):
         self.__log("getCachedTime %s %s" % (key, account_specific))
         pass
 
