@@ -5,6 +5,7 @@ from google.appengine.ext import db
 
 from mox import IsA, Mox
 
+from antonym import model as antonym_model
 from antonym.accessors import ArtifactAccessor, ArtifactSourceAccessor, Counters, FeedAccessor
 from antonym.core import ConflictingDataException, DuplicateDataException, IllegalArgumentException, NotFoundException
 from antonym.model import ArtifactContent, ArtifactInfo, ArtifactSource
@@ -129,6 +130,9 @@ class ArtifactSourceAccessorTest(TestCase):
     def setUp(self):
         self.m = Mox()
 
+    def tearDown(self):
+        self.m.UnsetStubs()
+        
     def test_delete_by_name_missing_source(self):
         self.m.StubOutWithMock(ArtifactSource, "get_by_name")
         
@@ -137,6 +141,20 @@ class ArtifactSourceAccessorTest(TestCase):
         
         self.m.ReplayAll()
         self.assertRaises(NotFoundException, ArtifactSourceAccessor.delete_by_name, name)
+        self.m.VerifyAll()
+
+    def test_delete_by_name_deletes_source_with_referencing_feed(self):
+        # self.m.StubOutWithMock(antonym_model, 'ArtifactSource')
+        self.m.StubOutWithMock(ArtifactSource, "get_by_name")
+        self.m.StubOutWithMock(FeedAccessor, "get_by_source_name")
+        
+        name = "mhawthorne"
+        source = MockEntity(key_name=name)
+        ArtifactSource.get_by_name(name).AndReturn(source)
+        FeedAccessor.get_by_source_name(name, return_none=True).AndReturn(MockEntity(key=name, url="http://real.ly"))
+        
+        self.m.ReplayAll()
+        self.assertRaises(ConflictingDataException, ArtifactSourceAccessor.delete_by_name, name)
         self.m.VerifyAll()
 
     def test_delete_by_name_deletes_source_with_no_referencing_feed(self):
@@ -159,20 +177,6 @@ class ArtifactSourceAccessorTest(TestCase):
         self.m.ReplayAll()
         ArtifactSourceAccessor.delete_by_name(name)
         self.m.VerifyAll()
-
-    def test_delete_by_name_deletes_source_with_referencing_feed(self):
-        self.m.StubOutWithMock(ArtifactSource, "get_by_name")
-        self.m.StubOutWithMock(FeedAccessor, "get_by_source_name")
-        
-        name = "mhawthorne"
-        source = MockEntity(key_name=name)
-        ArtifactSource.get_by_name(name).AndReturn(source)
-        FeedAccessor.get_by_source_name(name, return_none=True).AndReturn(MockEntity(key=name, url="http://real.ly"))
-        
-        self.m.ReplayAll()
-        self.assertRaises(ConflictingDataException, ArtifactSourceAccessor.delete_by_name, name)
-        self.m.VerifyAll()
-
 
 if __name__ == '__main__':
     main()

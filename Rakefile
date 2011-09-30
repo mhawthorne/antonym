@@ -9,6 +9,8 @@ DATA_EXPORT_DIR = 'tmp/backup'
 PASSWD_FILE = 'tmp/passwd'
 
 $fileutils = FileUtils::Verbose
+$python_bin = "python2.5"
+
 
 def flag_is_false(val)
   return val == "no"
@@ -103,14 +105,14 @@ end
 
 desc "interactive python shell with app classes loaded"
 task :shell do
-  cmd = "#{gae_python_path_string()} && python2.5"
+  cmd = "#{gae_python_path_string()} && #{$python_bin}"
   run cmd
 end
 
 desc "runs script with app classes loaded"
 task :script do
   s = get_env("s")
-  cmd = "#{gae_python_path_string()} && python2.5 #{s}"
+  cmd = "#{gae_python_path_string()} && #{$python_bin} #{s}"
   run cmd  
 end
 
@@ -137,7 +139,7 @@ namespace :test do
     open = get_env("open", :no)
     
     test_dir = "test/unit"
-    cmd_prefix = "#{gae_python_path_string()}:#{test_lib()}:#{test_dir} && python2.5 "
+    cmd_prefix = "#{gae_python_path_string()}:#{test_lib()}:#{test_dir} && #{$python_dir} "
     cmd_prefix << coverage_prefix() unless use_coverage == :no
     
     test_modules = load_test_modules(test_dir, "*_test.py")
@@ -156,7 +158,7 @@ namespace :test do
     host = get_env("host", $default_host)
   
     test_dir = "test/integration"
-    cmd_prefix = "export PYTHONPATH=#{$lib_dir}:#{test_lib()}:#{test_dir} && python2.5"
+    cmd_prefix = "export PYTHONPATH=#{$lib_dir}:#{test_lib()}:#{test_dir} && #{$python_bin}"
     
     # test_modules = load_test_modules(test_dir, "*_test.py")
     # joined_test_modules = test_modules.join(" ")
@@ -184,9 +186,9 @@ task :run_app => [ :lib_copy ] do
   gserver = "#{locate_gae()}/dev_appserver.py"
   
   
-  cmd = "/usr/bin/python2.5 "
+  cmd = "/usr/bin/#{$python_bin} "
   cmd << coverage_prefix unless coverage == :no
-  cmd << "#{gserver} -p #{port} --show_mail_body #{args} #{$appengine_dir} 2>&1 | tee tmp/gae.log"
+  cmd << "#{gserver} -p #{port} --default_partition="" --show_mail_body #{args} #{$appengine_dir} 2>&1 | tee tmp/gae.log"
   run cmd
 end
 
@@ -219,7 +221,7 @@ task :deploy => [ :lib_copy ] do
     cmd << "cat #{PASSWD_FILE} | "
   end
   
-  cmd << "python2.5 #{appcfg} "
+  cmd << "#{$python_bin} #{appcfg} "
   cmd << "--passin " if use_login  
   cmd << "--email=#{ADMIN_EMAIL} "
   cmd << "update #{$appengine_dir}"
@@ -260,7 +262,7 @@ def build_dump_cmd(host, kind, dir, keywords={})
   file = "#{dir}/#{kind}.sql3"
   
   "cat #{PASSWD_FILE} | " <<
-  "python2.5 #{locate_gae()}/bulkloader.py --dump " <<
+  "#{$python_bin} #{locate_gae()}/bulkloader.py --dump " <<
   default_bulkloader_cmd(host, kind, file) <<
   "--num_threads=1 " <<
   "#{APPENGINE_DIR}"
@@ -268,7 +270,7 @@ end
 
 def build_restore_cmd(host, kind, path, keywords={})
   "cat #{PASSWD_FILE} | "  <<
-  "python2.5 #{locate_gae()}/bulkloader.py --restore " <<
+  "#{$python_bin} #{locate_gae()}/bulkloader.py --restore " <<
   default_bulkloader_cmd(host, kind, path) <<
   "#{APPENGINE_DIR}"
 end

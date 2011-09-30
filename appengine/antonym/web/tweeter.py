@@ -34,7 +34,7 @@ class TwitterFollowersHandler(webapp.RequestHandler):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
         
-        filtered_followers = ([user_hash(u) for u in t_api.GetFollowers()])
+        filtered_followers = ([user_hash(u) for u in t_api.getFollowers()])
         if ff_ratio:
             filtered_followers = filter(lambda u: u['follower-to-friend-ratio'] > float(ff_ratio), 
                 filtered_followers)
@@ -49,7 +49,7 @@ class TwitterFriendsHandler(webapp.RequestHandler):
     def get(self):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        friends = sorted_user_list([user_hash(u) for u in t_api.GetFriends()])
+        friends = sorted_user_list([user_hash(u) for u in t_api.getFriends()])
         helper.write_json(friends)
 
 
@@ -59,7 +59,7 @@ class TwitterFriendHandler(webapp.RequestHandler):
     def get(self, username):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        friends = t_api.GetFriends()
+        friends = t_api.getFriends()
         found = None
         for f in friends:
             if f.screen_name == username:
@@ -106,7 +106,7 @@ class TwitterDirectHandler(webapp.RequestHandler):
         decoded_body = urllib.unquote(self.request.body)
         t_api = TwitterConnector.new_api()
         status = t_api.PostUpdate(decoded_body)
-        helper.write_json(status.AsDict())
+        helper.write_json(status.asDict())
 
 
 class TwitterMixHandler(webapp.RequestHandler):
@@ -129,7 +129,7 @@ class TwitterUserHandler(webapp.RequestHandler):
     def get(self, username):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        user = t_api.GetUser(username)
+        user = t_api.getUser(username)
         helper.write_json(user_hash(user))
 
 
@@ -140,7 +140,7 @@ class TwitterFriendsTimelineHandler(webapp.RequestHandler):
         c = self.request.get("c", 20)
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        statuses = [describe_status(s) for s in t_api.GetFriendsTimeline(count=c)]
+        statuses = [describe_status(s) for s in t_api.getFriendsTimeline(count=c)]
         helper.write_json(statuses)
 
 
@@ -151,7 +151,7 @@ class TwitterPublicTimelineHandler(webapp.RequestHandler):
         c = self.request.get("c", 20)
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        statuses = [describe_status(s) for s in t_api.GetPublicTimeline()]
+        statuses = [describe_status(s) for s in t_api.getPublicTimeline()]
         helper.write_json(statuses)
 
 
@@ -162,7 +162,7 @@ class TwitterMentionsHandler(webapp.RequestHandler):
         helper = RequestHelper(self)
         page = int(page)
         t_api = TwitterConnector.new_api()
-        raw_mentions = t_api.GetReplies(page=page)
+        raw_mentions = t_api.getReplies(page=page)
         pretty_mentions = []
         for m in raw_mentions:
             d = dict(id=m.id, 
@@ -193,7 +193,7 @@ class TwitterWebActor:
     def mix(cls, handler):
         helper = RequestHelper(handler)
         status = TwitterActor().mix()
-        helper.write_json(status.AsDict())
+        helper.write_json(status.asDict())
 
     @classmethod
     def respond(cls, handler):

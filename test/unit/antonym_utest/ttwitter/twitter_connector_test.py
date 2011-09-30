@@ -1,7 +1,8 @@
 from unittest import main, TestCase
 
 from mox import Mox
-from oauthtwitter import OAuthApi
+# from oauthtwitter import OAuthApi
+import twitter
 
 from antonym.accessors import ConfigurationAccessor
 from antonym.model import Configuration
@@ -22,7 +23,7 @@ class TwitterConnectorTest(TestCase):
         
         m.ReplayAll()
         api = TwitterConnector.new_api()
-        self.__assert_is_instance(api, OAuthApi)
+        self.__assert_is_instance(api, twitter.Api)
         m.VerifyAll()
 
     def test_read_only(self):

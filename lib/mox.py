@@ -410,6 +410,7 @@ class MockObject(MockAnything, object):
     self._known_methods = set()
     self._known_vars = set()
     self._class_to_mock = class_to_mock
+    print "class_to_mock: %s" % class_to_mock
     for method in dir(class_to_mock):
       if callable(getattr(class_to_mock, method)):
         self._known_methods.add(method)

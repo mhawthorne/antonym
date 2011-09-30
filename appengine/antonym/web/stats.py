@@ -2,6 +2,7 @@ from datetime import date, datetime, time
 import logging
 import sys
 
+from google.appengine.api import memcache
 from google.appengine.ext import webapp
 
 from katapult.reflect import get_full_class_name
@@ -38,6 +39,9 @@ class StatsHandler(webapp.RequestHandler):
         # for art in newer_arts:
         #     new_art_stats.append(dict(guid=art.guid, source_name=art.source_name))
         
+        # memcache stats
+        result['memcache'] = memcache.get_stats()
+        
         try:
             twactor = TwitterActor()
             
@@ -49,7 +53,6 @@ class StatsHandler(webapp.RequestHandler):
             mention_stats = []
             result['directs'] = direct_stats
             result['mentions'] = mention_stats
-        
             directs, mentions = twactor.messages(today)
             directs.reverse()
             mentions.reverse()

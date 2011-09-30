@@ -185,7 +185,7 @@ task :http do
     end
   end
   
-  puts "body:\n#{body}"
+  # puts "body:\n#{body}"
   
   config = load_config()
   svc = Antonym::GenericService.new(config)

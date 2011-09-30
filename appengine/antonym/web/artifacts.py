@@ -218,11 +218,15 @@ class ArtifactsSearchHandler(webapp.RequestHandler):
             json_results["count"] = q_results.count()
         elif output == "id":
             json_results = {}
-            json_results["count"] = q_results.count()
+            count = q_results.count()
+            if max_results > 0 and max_results < q_results.count():
+                count = max_results
+                
+            json_results["count"] = count
             ids = []
             json_results["ids"] = ids
-            fetch = lambda: q_results.fetch(1000) if max_results == -1 else lambda: q_results.fetch(max_results)
-            for c in fetch():
+            results = q_results.fetch(1000) if max_results == -1 else q_results.fetch(max_results)
+            for c in results:
                 ids.append(c.guid)
         else:
             json_results = []

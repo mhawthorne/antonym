@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Apptrace Code Browser - {{ app_id }} {{ filename }} ({{ lineno }})</title>
+    <link rel="stylesheet" href="/_ah/apptrace/static/apptrace.css"
+      type="text/css" media="all" />
+  </head>
+  <body>
+    <h1>Apptrace - {{ app_id }}</h1>
+    <h2>{{ filename }}</h2>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <pre>
+{% for line in code_lines %}<div id="n{{forloop.counter}}" class="code {% cycle even,odd %}{% ifequal forloop.counter lineno %} mark{% endifequal %}">{{forloop.counter|rjust:"4"}}: {{line|escape}}</div>{% endfor %}
+    </pre>
+  </body>
+</html>

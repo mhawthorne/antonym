@@ -64,7 +64,6 @@ class ArtifactSourceAccessor:
           db.delete(content_keys[info_len:])
         elif info_len > content_len:
           db.delete(info_keys[content_len:])
-          
       
         # deletes source
         db.delete(source)
@@ -78,7 +77,7 @@ class ArtifactSourceAccessor:
         counts = {}
         for src in ArtifactSource.all():
             c = Counters.source_counter(src.name)
-            counts[src.name] = c.count()
+            counts[src.name] = dict(counter=c.count(), info=cls.count_infos(src), content=cls.count_content(src))
         return counts
 
     @classmethod    

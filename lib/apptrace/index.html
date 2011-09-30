@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Apptrace - {{ app_id }}</title>
+    <script type="text/javascript" src="/_ah/apptrace/static/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="/_ah/apptrace/static/flot/jquery.flot.min.js"></script>
+    <!--[if IE]><script language="javascript" type="text/javascript" src="/_ah/apptrace/static/flot/excanvas.pack.js"></script><![endif]-->
+    <script type="text/javascript" src="/_ah/apptrace/static/apptrace.js"></script>
+    <link rel="stylesheet" href="/_ah/apptrace/static/apptrace.css"
+      type="text/css" media="all" />
+  </head>
+  <body>
+    <h1>Apptrace - {{ app_id }}</h1>
+    <h2>Memory usage (cumulated)</h2>
+    <div id="memory"></div>
+    <h2>Details</h2>
+    <div id="details"></div>
+    <div id="legend"></div>
+    <div id="actions">
+      <input id="refresh" type="button" value="Refresh" />
+      <a href="{{ records_url }}">Download raw data</a>
+    </div>
+  </body>
+</html>

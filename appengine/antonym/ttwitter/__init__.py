@@ -3,8 +3,9 @@ import logging
 import re
 from urllib2 import HTTPError
 
-from oauth.oauth import OAuthToken
-from oauthtwitter import OAuthApi
+# from oauth.oauth import OAuthToken
+# from oauthtwitter import OAuthApi
+import oauth2 as oauth
 import twitter
 
 from antonym import rrandom
@@ -58,22 +59,22 @@ class TwitterException(AppException):
 
 class ReadOnlyTwitterApi:
 
-    __supported_methods = set(["FetchPath", "GetDirectMessages", "GetFollowers", "GetFriends",
-        "GetFriendsTimeline", "GetReplies", "GetUser"])
+    __supported_methods = set([ "fetchPath", "getDirectMessages", "getFollowers", "getFriends",
+        "getFriendsTimeline", "getReplies", "getUser", "getUserTimeline" ])
     
     def __init__(self, delegate=None):
         self.__d = delegate or TwitterConnector.new_api()
         self.__reporter = ActivityReporter()
         self.__post_id = 1;
 
-    def PostUpdate(self, *args):
+    def postUpdate(self, *args):
         msg = args[0]
         self.__post_id += 1;
         r = Record(id=self.__post_id)
         self.__decorate_status(r)
         return r
         
-    def PostRetweet(self, *args):
+    def retweet(self, *args):
         tweet_id = args[0]
         r = Record(id=tweet_id)
         self.__decorate_status(r)
@@ -87,7 +88,7 @@ class ReadOnlyTwitterApi:
            raise IllegalStateException("%s.%s not found" % (self.__class__.__name__, name)) 
     
     def __decorate_status(self, status):
-        status.AsDict = lambda: status.to_hash()
+        status.asDict = lambda: status.to_hash()
         status.user = Record()
         
     def __nonzero__(self):
@@ -101,11 +102,10 @@ class TwitterConnector:
         config = ConfigurationAccessor.get_or_create()
         if config and config.twitter_oauth_enabled and config.twitter_access_token:
             logging.debug("creating OAuth API instance")
-            api = cls._new_oauth_api(OAuthToken.from_string(config.twitter_access_token))
+            api = cls._new_oauth_api(config.twitter_access_token)
         else:
-            logging.debug("creating basic API instance")
-            api = cls._new_basic_api()
-
+            raise Exception("no OAuth token stored in config")
+            
         if safe_int(config.twitter_read_only):
             logging.debug("creating read-only Twitter API")
             api = ReadOnlyTwitterApi(api)
@@ -131,9 +131,12 @@ class TwitterConnector:
         return api.getAccessToken()
 
     @classmethod
-    def _new_oauth_api(cls, twitter_access_token):
-        key, secret = service_users.twitter_oauth_creds()
-        return OAuthApi(key, secret, twitter_access_token, cache=TwitterMemcache)
+    def _new_oauth_api(cls, encoded_access_token):
+        consumer_key, consumer_secret = service_users.twitter_oauth_creds()
+        access_token = oauth.Token.from_string(encoded_access_token)
+        return twitter.Api(consumer_key=consumer_key, consumer_secret=consumer_secret,
+            access_token_key=access_token.key, access_token_secret=access_token.secret,
+            cache=TwitterMemcache())
 
 
 class ActionSelector:
@@ -191,7 +194,7 @@ class TwitterActor(object):
         return speaker
     
     def latest_statuses(self, count=None):
-        return self.__twitter.GetUserTimeline(count=count)
+        return self.__twitter.getUserTimeline(count=count)
         
     def mix(self):
         """
@@ -202,7 +205,7 @@ class TwitterActor(object):
         sources, content = Mixer(speaker).mix_random_limit_sources(2, degrade=True)
         logging.debug("mixing random tweet: {%s} %s" % (";".join([s.name for s in sources]), content))
         self.__reporter.posted(content)
-        return self.__twitter.PostUpdate(content)
+        return self.__twitter.postUpdate(content)
         
     def messages(self, since=None):
         """
@@ -212,10 +215,10 @@ class TwitterActor(object):
         try:
             # I use list comprehensions since I suspect that these methods return iterators
             # reversing the lists puts them in chronological order
-            directs = [m for m in self.__twitter.GetDirectMessages(since=since)]
+            directs = [m for m in self.__twitter.getDirectMessages(since=since)]
             directs.reverse()
         
-            mentions = [r for r in self.__twitter.GetReplies(since=since)]
+            mentions = [r for r in self.__twitter.getReplies(since=since)]
             mentions.reverse()
         
             return directs, mentions
@@ -241,7 +244,7 @@ class TwitterActor(object):
         return direct, mention
 
     def retweet(self):
-        statuses = self.__twitter.GetFriendsTimeline(count=10)
+        statuses = self.__twitter.getFriendsTimeline(count=10)
 
         retweet_source = None
         for candidate in statuses:
@@ -272,7 +275,7 @@ class TwitterActor(object):
             
         pretty_retweet = describe_status(retweet_source)
         logging.debug("retweeting '%s'" % pretty_retweet)
-        retweet = self.__twitter.PostRetweet(retweet_source.id)
+        retweet = self.__twitter.retweet(retweet_source.id)
         # stores retweet
         TwitterResponseAccessor.create(str(retweet_source.id), response_id=str(retweet.id),
             tweet_type=TwitterResponse.RETWEET, user=retweet_source.user.screen_name)
@@ -298,9 +301,9 @@ class TwitterActor(object):
                 # a response to a direct message or mention was generated
                 responded = True
                 if direct:
-                    result.append(direct.AsDict())
+                    result.append(direct.asDict())
                 if response:
-                    result.append(response.AsDict())
+                    result.append(response.asDict())
                     
         if not responded:
             # no response was generated
@@ -332,7 +335,7 @@ class TwitterActor(object):
         self.__twitter.CreateFriendship()
 
     def message_master(self, message):
-        self.__twitter.PostDirectMessage(cls.MASTER_USERNAME, message)
+        self.__twitter.postDirectMessage(cls.MASTER_USERNAME, message)
 
     def __direct_response(self, directs):
         direct = None
@@ -351,7 +354,7 @@ class TwitterActor(object):
             speaker = self.__select_speaker()
             sources, response_text = Mixer(speaker).mix_response(direct.text, min_results=1)
             logging.info("responding to direct message %s %s" % (direct.id, response_text))
-            sent_message = self.__twitter.PostDirectMessage(direct.sender_screen_name, response_text)
+            sent_message = self.__twitter.postDirectMessage(direct.sender_screen_name, response_text)
             self.__reporter.posted(response_text)
             TwitterResponseAccessor.create(str(direct.id), response_id=str(sent_message.id), user=direct.sender_screen_name) 
 
@@ -385,7 +388,7 @@ class TwitterActor(object):
             response_text = "@%s %s" % (username, mix)
             logging.info("responding to public message %s: %s" % (message.id, response_text))
             
-            sent_message = self.__twitter.PostUpdate(response_text, message.id)
+            sent_message = self.__twitter.postUpdate(response_text, message.id)
             TwitterResponseAccessor.create(str(message.id), response_id=str(sent_message.id), user=username, tweet_type=TwitterResponse.MENTION) 
             self.__reporter.posted(response_text)
 
@@ -393,21 +396,28 @@ class TwitterActor(object):
 
 
 class TwitterMemcache(object):
+    """ TODO: implement this """
+    
+    def __init__(self, root_directory=None):
+        pass
 
-  def __init__(self, root_directory=None):
-      pass
+    def __log(self, msg):
+        logging.debug("[%s] %s" % (self.__class__.__name__, msg))
 
-  def Get(self,key):
-      pass
-      
-  def Set(self,key,data):
-      pass
-      
-  def Remove(self,key):
-      pass
-      
-  def GetCachedTime(self,key):
-      pass
+    def get(self,key,account_specific):
+        self.__log("get %s %s" % (key, account_specific))
+
+    def set(self,key,data,account_specific):
+        self.__log("set %s %s %s" % (key, data, account_specific))
+        pass
+
+    def remove(self,key,account_specific):
+        self.__log("remove %s %s" % (key, account_specific))
+        pass
+
+    def getCachedTime(self,key,account_specific):
+        self.__log("getCachedTime %s %s" % (key, account_specific))
+        pass
 
 
 class TweetAnalyzer:
