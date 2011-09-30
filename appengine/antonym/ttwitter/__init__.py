@@ -59,8 +59,8 @@ class TwitterException(AppException):
 
 class ReadOnlyTwitterApi:
 
-    __supported_methods = set([ "fetchPath", "getDirectMessages", "getFollowers", "getFriends",
-        "getFriendsTimeline", "getReplies", "getUser", "getUserTimeline" ])
+    __supported_methods = set([ "FetchPath", "GetDirectMessages", "GetFollowers", "GetFriends",
+        "GetFriendsTimeline", "GetReplies", "GetUser", "GetUserTimeline" ])
     
     def __init__(self, delegate=None):
         self.__d = delegate or TwitterConnector.new_api()
@@ -205,7 +205,7 @@ class TwitterActor(object):
         sources, content = Mixer(speaker).mix_random_limit_sources(2, degrade=True)
         logging.debug("mixing random tweet: {%s} %s" % (";".join([s.name for s in sources]), content))
         self.__reporter.posted(content)
-        return self.__twitter.postUpdate(content)
+        return self.__twitter.PostUpdate(content)
         
     def messages(self, since=None):
         """
@@ -215,10 +215,10 @@ class TwitterActor(object):
         try:
             # I use list comprehensions since I suspect that these methods return iterators
             # reversing the lists puts them in chronological order
-            directs = [m for m in self.__twitter.getDirectMessages(since=since)]
+            directs = [m for m in self.__twitter.GetDirectMessages(since=since)]
             directs.reverse()
         
-            mentions = [r for r in self.__twitter.getReplies(since=since)]
+            mentions = [r for r in self.__twitter.GetReplies(since=since)]
             mentions.reverse()
         
             return directs, mentions
@@ -244,7 +244,7 @@ class TwitterActor(object):
         return direct, mention
 
     def retweet(self):
-        statuses = self.__twitter.getFriendsTimeline(count=10)
+        statuses = self.__twitter.GetFriendsTimeline(count=10)
 
         retweet_source = None
         for candidate in statuses:
@@ -275,7 +275,7 @@ class TwitterActor(object):
             
         pretty_retweet = describe_status(retweet_source)
         logging.debug("retweeting '%s'" % pretty_retweet)
-        retweet = self.__twitter.retweet(retweet_source.id)
+        retweet = self.__twitter.PostRetweet(retweet_source.id)
         # stores retweet
         TwitterResponseAccessor.create(str(retweet_source.id), response_id=str(retweet.id),
             tweet_type=TwitterResponse.RETWEET, user=retweet_source.user.screen_name)
@@ -301,9 +301,9 @@ class TwitterActor(object):
                 # a response to a direct message or mention was generated
                 responded = True
                 if direct:
-                    result.append(direct.asDict())
+                    result.append(direct.AsDict())
                 if response:
-                    result.append(response.asDict())
+                    result.append(response.AsDict())
                     
         if not responded:
             # no response was generated
@@ -354,7 +354,7 @@ class TwitterActor(object):
             speaker = self.__select_speaker()
             sources, response_text = Mixer(speaker).mix_response(direct.text, min_results=1)
             logging.info("responding to direct message %s %s" % (direct.id, response_text))
-            sent_message = self.__twitter.postDirectMessage(direct.sender_screen_name, response_text)
+            sent_message = self.__twitter.PostDirectMessage(direct.sender_screen_name, response_text)
             self.__reporter.posted(response_text)
             TwitterResponseAccessor.create(str(direct.id), response_id=str(sent_message.id), user=direct.sender_screen_name) 
 
@@ -388,7 +388,7 @@ class TwitterActor(object):
             response_text = "@%s %s" % (username, mix)
             logging.info("responding to public message %s: %s" % (message.id, response_text))
             
-            sent_message = self.__twitter.postUpdate(response_text, message.id)
+            sent_message = self.__twitter.PostUpdate(response_text, message.id)
             TwitterResponseAccessor.create(str(message.id), response_id=str(sent_message.id), user=username, tweet_type=TwitterResponse.MENTION) 
             self.__reporter.posted(response_text)
 

@@ -59,7 +59,7 @@ class TwitterFriendHandler(webapp.RequestHandler):
     def get(self, username):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        friends = t_api.getFriends()
+        friends = t_api.GetFriends()
         found = None
         for f in friends:
             if f.screen_name == username:
@@ -74,7 +74,7 @@ class TwitterFriendHandler(webapp.RequestHandler):
         """ follows the specified user """
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        t_api.createFriendship(username)
+        t_api.CreateFriendship(username)
         helper.set_status(204)
         
     @require_service_user()
@@ -82,7 +82,7 @@ class TwitterFriendHandler(webapp.RequestHandler):
         """ unfollows the specified user """
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        t_api.destroyFriendship(username)
+        t_api.DestroyFriendship(username)
         helper.set_status(204)
 
 

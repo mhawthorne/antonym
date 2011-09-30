@@ -14,10 +14,10 @@ class ReadOnlyTwitterApiTest(TestCase):
         api = m.CreateMock(Api)
         ro_api = ReadOnlyTwitterApi(api)
         
-        api.getFriends()
+        api.GetFriends()
         
         m.ReplayAll()
-        ro_api.getFriends()
+        ro_api.GetFriends()
         m.VerifyAll()
         
     def test_get_user(self):
@@ -26,10 +26,10 @@ class ReadOnlyTwitterApiTest(TestCase):
         api = m.CreateMock(Api)
         ro_api = ReadOnlyTwitterApi(api)
         
-        api.getUser(IgnoreArg())
+        api.GetUser(IgnoreArg())
         
         m.ReplayAll()
-        ro_api.getUser("mhawthorne")
+        ro_api.GetUser("mhawthorne")
         m.VerifyAll()
         
         

@@ -73,10 +73,10 @@ def _build_standard_config(moxer):
     return config
 
 def _return_direct_messages(api, directs):
-    return api.getDirectMessages(since=None).AndReturn(directs)
+    return api.GetDirectMessages(since=None).AndReturn(directs)
 
 def _return_replies(api, replies):
-    return api.getReplies(since=None).AndReturn(replies)
+    return api.GetReplies(since=None).AndReturn(replies)
     
 def _act_no_messages(api, moxer):
     moxer.StubOutWithMock(Mixer, "mix_random_limit_sources")
@@ -89,7 +89,7 @@ def _act_no_messages(api, moxer):
     content = "so, wtf is going on here"
     Mixer.mix_random_limit_sources(2, degrade=True).AndReturn((sources, content))
     
-    api.postUpdate(IsA(str)).AndReturn(Record(text="epic, fail is epic", user=Record(screen_name="jbell")))
+    api.PostUpdate(IsA(str)).AndReturn(Record(text="epic, fail is epic", user=Record(screen_name="jbell")))
 
 def _random_tweet(selector):
     selector.select_action().AndReturn(ActionSelector.RANDOM_TWEET)
@@ -116,7 +116,7 @@ def _post_response_to(moxer, api, message):
     status = moxer.CreateMock(twitter.Status)
     status.id = message.id * 2
     status.id_str = str(status.id)
-    api.postUpdate(IgnoreArg(), message.id).AndReturn(status)
+    api.PostUpdate(IgnoreArg(), message.id).AndReturn(status)
     return status
 
 def _save_response(message, response):
@@ -129,7 +129,7 @@ def _no_response_found(msg):
     TwitterResponseAccessor.get_by_message_id(msg.id_str)
 
 def _format(msg):
-    msg.asDict().AndReturn({})
+    msg.AsDict().AndReturn({})
 
 def _should_respond(analyzer, msg, condition):
     analyzer.should_respond(msg).AndReturn(condition)
@@ -183,9 +183,9 @@ class TwitterActorTest(TestCase):
         ArtifactAccessor.search("spattered").AndReturn(create_content_list(10))
         
         # response
-        api.postDirectMessage(direct.sender_screen_name, IgnoreArg()).AndReturn(post)
+        api.PostDirectMessage(direct.sender_screen_name, IgnoreArg()).AndReturn(post)
         TwitterResponseAccessor.create(str(direct.id), response_id=str(post.id), user=direct.sender_screen_name)
-        post.asDict().AndReturn({})
+        post.AsDict().AndReturn({})
         
         moxer.ReplayAll()
         actor.act()
@@ -334,7 +334,7 @@ class TwitterActorTest(TestCase):
         status_user = Record(screen_name=self.id())
         status_ids = [5, 10, 15]
         timeline = (Record(id=id, text="epic, fail is epic %s" % id, user=status_user) for id in status_ids)
-        api.getFriendsTimeline(count=10).AndReturn(timeline)
+        api.GetFriendsTimeline(count=10).AndReturn(timeline)
         # print "timeline: %s" % [t for t in timeline]
         
         # I choose a status to be the one I will retweet
@@ -362,7 +362,7 @@ class TwitterActorTest(TestCase):
             
             retweet_id = str(status_id + 1)
             retweet = Record(id=retweet_id, user=self.id())
-            api.retweet(status_id).AndReturn(retweet)
+            api.PostRetweet(status_id).AndReturn(retweet)
             TwitterResponseAccessor.create(status_id_str, response_id=retweet_id, tweet_type=TwitterResponse.RETWEET, user=status_user.screen_name)
                 
         moxer.ReplayAll()
@@ -386,7 +386,7 @@ class TwitterFriendHandlerTest(TestCase):
         TwitterConnector.new_api().AndReturn(api)
         
         username = "mhawthorne"
-        api.createFriendship(username)
+        api.CreateFriendship(username)
         response.set_status(204)
         
         handler = TwitterFriendHandler()
