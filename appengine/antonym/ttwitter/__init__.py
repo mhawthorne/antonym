@@ -194,7 +194,7 @@ class TwitterActor(object):
         return speaker
     
     def latest_statuses(self, count=None):
-        return self.__twitter.getUserTimeline(count=count)
+        return self.__twitter.GetUserTimeline(count=count)
         
     def mix(self):
         """
