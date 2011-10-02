@@ -207,6 +207,35 @@ end
 
 desc "deploys application to appengine"
 task :deploy => [ :lib_copy ] do
+  appcfg("deploy")
+# TODO: delete this once I confirm deploy target still works
+#   default_login = :y
+#   login = get_env("login", default_login)
+#   
+#   appcfg = find_appcfg_bin()
+#   
+#   fail "#{appcfg_bin} not found" if appcfg.empty?
+#   
+#   cmd = ""
+#   use_login = (login == default_login)
+#   if use_login
+#     Rake::Task["verify_passwd"].execute
+#     cmd << "cat #{PASSWD_FILE} | "
+#   end
+#   
+#   cmd << "#{$python_bin} #{appcfg} "
+#   cmd << "--passin " if use_login  
+#   cmd << "--email=#{ADMIN_EMAIL} "
+#   cmd << "update #{$appengine_dir}"
+#   run cmd
+end
+
+task :appcfg do
+  cmd = get_env("cmd", "--help")
+  appcfg(cmd)
+end
+
+def appcfg(cmd)
   default_login = :y
   login = get_env("login", default_login)
   
@@ -214,18 +243,18 @@ task :deploy => [ :lib_copy ] do
   
   fail "#{appcfg_bin} not found" if appcfg.empty?
   
-  cmd = ""
+  exe = ""
   use_login = (login == default_login)
   if use_login
     Rake::Task["verify_passwd"].execute
-    cmd << "cat #{PASSWD_FILE} | "
+    exe << "cat #{PASSWD_FILE} | "
   end
   
-  cmd << "#{$python_bin} #{appcfg} "
-  cmd << "--passin " if use_login  
-  cmd << "--email=#{ADMIN_EMAIL} "
-  cmd << "update #{$appengine_dir}"
-  run cmd
+  exe << "#{$python_bin} #{appcfg} "
+  exe << "--passin " if use_login  
+  exe << "--email=#{ADMIN_EMAIL} "
+  exe << "#{cmd} #{$appengine_dir}"
+  run exe
 end
 
 desc "fetches HTTP logs from appengine"
