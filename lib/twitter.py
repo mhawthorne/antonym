@@ -2810,8 +2810,12 @@ class Api(object):
     Returns:
     A twitter.Status instance representing the retweet posted
     '''
-    if not self._username:
+    # if not self._username:
+    #   raise TwitterError("The twitter.Api instance must be authenticated.")
+    
+    if not self._oauth_consumer:
       raise TwitterError("The twitter.Api instance must be authenticated.")
+
     try:
         if int(id) <= 0:
           raise TwitterError("'id' must be a positive number")
