@@ -424,6 +424,9 @@ class TweetAnalyzer:
     
     NO_RESPONSE_REGEX = re.compile("^.*RT @livelock.*$")
     
+    # TODO: move to config
+    USER_BLACKLIST = set([ "mardsid", "livelock" ])
+    
     def should_respond(self, message):
         """
         returns:
@@ -436,4 +439,9 @@ class TweetAnalyzer:
         returns:
             True or False
         """
-        return not self.NO_RESPONSE_REGEX.match(message.text)
+        result = True
+        if message.user.screen_name in USER_BLACKLIST:
+            result = False
+        elif self.NO_RESPONSE_REGEX.match(message.text):
+            result = False
+        return result

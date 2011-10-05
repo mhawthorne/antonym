@@ -207,7 +207,7 @@ end
 
 desc "deploys application to appengine"
 task :deploy => [ :lib_copy ] do
-  appcfg("deploy")
+  appcfg("update")
 # TODO: delete this once I confirm deploy target still works
 #   default_login = :y
 #   login = get_env("login", default_login)

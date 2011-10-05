@@ -129,7 +129,7 @@ class TwitterUserHandler(webapp.RequestHandler):
     def get(self, username):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        user = t_api.getUser(username)
+        user = t_api.GetUser(username)
         helper.write_json(user_hash(user))
 
 

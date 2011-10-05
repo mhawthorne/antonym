@@ -2822,7 +2822,8 @@ class Api(object):
     except ValueError:
         raise TwitterError("'id' must be an integer")
     url = '%s/statuses/retweet/%s.json' % (self.base_url, id)
-    json = self._FetchUrl(url, post_data={})
+    post_data = {'id': id}
+    json = self._FetchUrl(url, post_data=post_data)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
