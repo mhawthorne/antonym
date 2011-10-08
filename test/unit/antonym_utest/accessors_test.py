@@ -169,8 +169,8 @@ class ArtifactSourceAccessorTest(TestCase):
         source = MockEntity(key_name=name)
         ArtifactSource.get_by_name(name).AndReturn(source)
         FeedAccessor.get_by_source_name(name, return_none=True)
-        ArtifactInfo.find_by_source(source, keys_only=True).AndReturn(())
-        ArtifactContent.find_by_source(source).AndReturn(())
+        ArtifactInfo.find_by_source(source, keys_only=True).AndReturn(MockQuery(range(0,0)))
+        ArtifactContent.find_by_source(source).AndReturn(MockQuery(range(0,0)))
         db.delete(source)
         memcache.delete(IsA(str)).AndReturn(1)
         

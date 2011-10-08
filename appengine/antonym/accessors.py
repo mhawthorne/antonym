@@ -58,8 +58,8 @@ class ArtifactSourceAccessor:
         
         # deletes extras if info/content sizes don't match
         # (this would be a data bug somewhere)
-        content_len = len(content_keys)
-        info_len = len(info_keys)
+        content_len = content_keys.count()
+        info_len = info_keys.count()
         if content_len < info_len:
           db.delete(content_keys[info_len:])
         elif info_len > content_len:

@@ -296,15 +296,18 @@ class TwitterActor(object):
         result = []
         responded = False
         if not skip_responses:
-            direct, response = self.respond()
-            if (direct or response):
-                # a response to a direct message or mention was generated
-                responded = True
-                if direct:
-                    result.append(direct.AsDict())
-                if response:
-                    result.append(response.AsDict())
-                    
+            try:
+                direct, response = self.respond()
+                if (direct or response):
+                    # a response to a direct message or mention was generated
+                    responded = True
+                    if direct:
+                        result.append(direct.AsDict())
+                    if response:
+                        result.append(response.AsDict())
+            except Exception, e:
+                logging.error(e)
+                
         if not responded:
             # no response was generated
             should_act = force_act or self.__selector.should_act()
@@ -440,7 +443,7 @@ class TweetAnalyzer:
             True or False
         """
         result = True
-        if message.user.screen_name in USER_BLACKLIST:
+        if message.user.screen_name in self.USER_BLACKLIST:
             result = False
         elif self.NO_RESPONSE_REGEX.match(message.text):
             result = False
