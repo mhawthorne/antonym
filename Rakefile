@@ -105,7 +105,8 @@ end
 
 desc "interactive python shell with app classes loaded"
 task :shell do
-  cmd = "#{gae_python_path_string()} && #{$python_bin}"
+  bin = `which remote_api_shell.py`.strip
+  cmd = "#{gae_python_path_string()} && #{bin} -s localhost:9009"
   run cmd
 end
 
@@ -208,26 +209,6 @@ end
 desc "deploys application to appengine"
 task :deploy => [ :lib_copy ] do
   appcfg("update")
-# TODO: delete this once I confirm deploy target still works
-#   default_login = :y
-#   login = get_env("login", default_login)
-#   
-#   appcfg = find_appcfg_bin()
-#   
-#   fail "#{appcfg_bin} not found" if appcfg.empty?
-#   
-#   cmd = ""
-#   use_login = (login == default_login)
-#   if use_login
-#     Rake::Task["verify_passwd"].execute
-#     cmd << "cat #{PASSWD_FILE} | "
-#   end
-#   
-#   cmd << "#{$python_bin} #{appcfg} "
-#   cmd << "--passin " if use_login  
-#   cmd << "--email=#{ADMIN_EMAIL} "
-#   cmd << "update #{$appengine_dir}"
-#   run cmd
 end
 
 task :appcfg do

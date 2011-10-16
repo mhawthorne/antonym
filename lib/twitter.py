@@ -2799,35 +2799,6 @@ class Api(object):
     results.append(self.PostUpdate(lines[-1], **kwargs))
     return results
 
-  def PostRetweet(self, id):
-    '''Retweet a tweet with the Retweet API
-
-    The twitter.Api instance must be authenticated.
-
-    Args:
-    id: The numerical ID of the tweet you are retweeting
-
-    Returns:
-    A twitter.Status instance representing the retweet posted
-    '''
-    # if not self._username:
-    #   raise TwitterError("The twitter.Api instance must be authenticated.")
-    
-    if not self._oauth_consumer:
-      raise TwitterError("The twitter.Api instance must be authenticated.")
-
-    try:
-        if int(id) <= 0:
-          raise TwitterError("'id' must be a positive number")
-    except ValueError:
-        raise TwitterError("'id' must be an integer")
-    url = '%s/statuses/retweet/%s.json' % (self.base_url, id)
-    post_data = {'id': id}
-    json = self._FetchUrl(url, post_data=post_data)
-    data = simplejson.loads(json)
-    self._CheckForTwitterError(data)
-    return Status.NewFromJsonDict(data)
-
   def GetUserRetweets(self, count=None, since_id=None, max_id=None, include_entities=False):
      '''Fetch the sequence of retweets made by a single user.
 
@@ -3727,7 +3698,9 @@ class Api(object):
     # to check first, rather than try and catch the exception
     if 'error' in data:
       raise TwitterError(data['error'])
-
+    elif 'errors' in data:
+      raise TwitterError(data['errors'])
+      
   def _FetchUrl(self,
                 url,
                 post_data=None,
@@ -3841,6 +3814,50 @@ class Api(object):
     # Always return the latest version
     return url_data
 
+
+  # begin mhawthorne hacks
+  def PostRetweet(self, id):
+    '''Retweet a tweet with the Retweet API
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+    id: The numerical ID of the tweet you are retweeting
+
+    Returns:
+    A twitter.Status instance representing the retweet posted
+    '''
+    # if not self._username:
+    #   raise TwitterError("The twitter.Api instance must be authenticated.")
+    
+    if not self._oauth_consumer:
+      raise TwitterError("The twitter.Api instance must be authenticated.")
+
+    try:
+        if int(id) <= 0:
+          raise TwitterError("'id' must be a positive number")
+    except ValueError:
+        raise TwitterError("'id' must be an integer")
+    url = '%s/statuses/retweet/%s.json' % (self.base_url, id)
+    post_data = {'id': id}
+    json = self._FetchUrl(url, post_data=post_data)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return Status.NewFromJsonDict(data)
+    
+  def FetchResource(self, path):
+    if not self._oauth_consumer:
+      raise TwitterError("The twitter.Api instance must be authenticated.")
+
+    url = '%s/%s.json' % (self.base_url, path)
+    json = self._FetchUrl(url)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return data
+      
+      
+  # end mhawthorne hacks
+  
 class _FileCacheError(Exception):
   '''Base exception class for FileCache related errors'''
 

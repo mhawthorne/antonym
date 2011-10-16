@@ -27,6 +27,18 @@ class TwitterTest(TestCase):
         api.PostRetweet(1)
         self.m.VerifyAll()
 
+    def test_fetch_resource(self):
+        api = Api(consumer_key="ckey", consumer_secret="csecret", 
+            access_token_key="akey", access_token_secret="asecret")
+        self.m.StubOutWithMock(api, "_FetchUrl")
+        
+        json_blob = json.dumps({})
+        api._FetchUrl(IgnoreArg()).AndReturn(json_blob)
+        
+        self.m.ReplayAll()
+        api.FetchResource("/trends/current.json")
+        self.m.VerifyAll()
 
+        
 if __name__ == "__main__":
     main()

@@ -179,12 +179,12 @@ class TwitterApiHandler(webapp.RequestHandler):
     def get(self, path):
         helper = RequestHelper(self)
         t_api = TwitterConnector.new_api()
-        body = t_api.FetchPath("%s.json" % path)
         try:
-            helper.write_json(json.loads(body))
-        except json.JSONDecodeError, e:
-            helper.write(body)
-        
+            result_hash = t_api.FetchResource("%s" % path)
+            logging.debug("result_hash: %s" % result_hash)
+            helper.write_json(result_hash)
+        except twitter.TwitterError, e:
+            helper.write(e)
 
 
 class TwitterWebActor:

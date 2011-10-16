@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import random
 import re
 from urllib2 import HTTPError
 
@@ -146,6 +147,7 @@ class ActionSelector:
     RESPONSE = "response"
     RANDOM_TWEET = "random-tweet"
     RETWEET = "retweet"
+    TRENDING = "trending"
     
     # keys are UTC hour ranges, values are lists of tuples containing (action, weight) pairs
     # this is used to select what to do at a given time
@@ -193,6 +195,12 @@ class TwitterActor(object):
         logging.debug("selected speaker: %s" % speaker.__class__.__name__)
         return speaker
     
+    def __mix(self):
+        speaker = self.__select_speaker()
+        sources, content = Mixer(speaker).mix_random_limit_sources(2, degrade=True)
+        logging.debug("mixing random tweet: {%s} %s" % (";".join([s.name for s in sources]), content))
+        return sources, content
+        
     def latest_statuses(self, count=None):
         return self.__twitter.GetUserTimeline(count=count)
         
@@ -201,11 +209,32 @@ class TwitterActor(object):
         returns:
             twitter.Status
         """
-        speaker = self.__select_speaker()
-        sources, content = Mixer(speaker).mix_random_limit_sources(2, degrade=True)
-        logging.debug("mixing random tweet: {%s} %s" % (";".join([s.name for s in sources]), content))
+        sources, content = self.__mix()
         self.__reporter.posted(content)
         return self.__twitter.PostUpdate(content)
+    
+    def mix_trend(self):
+        # query trends
+        trends = self.__twitter.GetTrendsDaily()
+        hashtags = set()
+        for group in trends:
+            for trend in group:
+                name = trend.name
+                if name.startswith("#"):
+                    hashtags.add(name)
+        
+        # select random trend
+        # needs to pass a list here since sets can't be indexed
+        logging.debug("trends: %s" % hashtags)
+        trend = random.choice([h for h in hashtags])
+        logging.debug("selected trend: %s" % trend)
+        
+        # mix
+        sources, content = self.__mix()
+        tweet_content = "%s %s" % (content, trend)
+        logging.debug("tweet: %s" % tweet_content)
+        self.__reporter.posted(tweet_content)
+        return self.__twitter.PostUpdate(tweet_content)
         
     def messages(self, since=None):
         """
@@ -319,17 +348,21 @@ class TwitterActor(object):
             else:
                 # uses action parameter or selects one
                 if not action: action = self.__selector.select_action()
+                result.append(action)
                 if action == ActionSelector.RETWEET:
                     # is there anything to retweet?
                     retweet, summary = self.retweet()
                     result.append(summary)
                 elif action == ActionSelector.RANDOM_TWEET:
                     # no message; send random tweet
-                    result.append(ActionSelector.RANDOM_TWEET)
                     status = self.mix()
                     result.append(describe_status(status))
+                elif action == ActionSelector.TRENDING:
+                    status = self.mix_trend()
+                    result.append(describe_status(status))
                 else:
-                    logging.debug("unexpected action '%s'" % action)
+                    # logging.error("unexpected action '%s'" % action)
+                    raise Exception("unexpected action '%s'" % action)
                     
         return tuple(result)
     

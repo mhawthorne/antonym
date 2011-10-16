@@ -1,6 +1,7 @@
 import logging
 import os
 
+from google.appengine.ext.appstats import recording
 
 # the "f" is to avoid favico.ico requests
 apptrace_URL_PATTERNS  = ['^/[^f_-].*$']
@@ -14,8 +15,9 @@ def is_prod():
     
 def webapp_add_wsgi_middleware(app):
     logging.basicConfig(level=logging.DEBUG)
-    from google.appengine.ext.appstats import recording
-    app = recording.appstats_wsgi_middleware(app)
+
+    # disabling appstats until log noise is fixed
+    # app = recording.appstats_wsgi_middleware(app)
     
     # adds apptrace profiling if running locally
     # if not is_prod():

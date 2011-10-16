@@ -27,8 +27,6 @@ class ArtifactsHelper:
         username = kw.get("username", None)
         user = User(username) if username else users.get_current_user()
         
-        logging.debug("post kw: %s" % kw)
-        
         json_body = request.body
         if not json_body:
             helper.error(400, "body required")
