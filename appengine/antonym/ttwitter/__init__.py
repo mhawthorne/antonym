@@ -162,7 +162,7 @@ class ActionSelector:
         xrange(11,24): _active_weights }
 
     # weighted probabilities of actions to perform if there is nothing to respond to
-    _actions_weighted = [(RANDOM_TWEET,8), (RETWEET,2)]
+    _actions_weighted = [(RANDOM_TWEET,6), (RETWEET,2), (TRENDING, 2)]
 
     def should_act(self):
         now = datetime.utcnow()
