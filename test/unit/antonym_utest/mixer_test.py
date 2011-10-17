@@ -153,7 +153,6 @@ class MixerTest(unittest.TestCase):
         
     def test_blacklist(self):
         # all of these words should be replaced
-        # also: relax, I'm half black
         blacklist_words = ('cim', '#cim', 'CIM', '#CIM', 'cimdata', 'CIMData',
             'comcast', '#comcast', 'Comcast', '#Comcast',
             'comcast.net', 
@@ -165,10 +164,13 @@ class MixerTest(unittest.TestCase):
             'jason press', 'Jason Press', 'jpress',
             'amy banse', 'sam schwartz', 'bruce',
             'https://www.yammer.com/theplatform.com/nickrossi',
+            'tp', 'tP', 'Tp', 'TP',
+            # relax, I'm half black
             'nigger', 'NIGGER', 'Nigger', 'nigga', 'NIGGA', 'Nigga')
         
         # these corner-case words should remain untouched
-        untouched_words = ('http://superbad.com', )
+        # 'footprint' should not be replaced, even thought it contains 'tp', which should be replaced
+        untouched_words = ('http://superbad.com', 'footprint')
         
         def _source(id):
             return MockEntity(key_name=str(id), name="source/%d" % id)

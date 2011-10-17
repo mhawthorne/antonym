@@ -40,6 +40,11 @@ class Mixer(object):
     # relax, I'm half black
     _political_blacklist = set([r'[nN][iI][gG]{2}[eE][rR]', r'[nN][iI][gG]{2}[aA]'])
     
+    # blacklist for which I want or need control over specific mappings
+    _blacklist_map = {
+        r'(^|\s+)[tT][pP]($|\s+)': ' %s ' % _blacklist_phrase
+    }
+    
     _blacklist_regexes = _comcast_blacklist | _political_blacklist
     
     _rewrite_map = {
@@ -53,14 +58,16 @@ class Mixer(object):
         # matches: jonjlee, jonlee, jonjle1
         r'(j(onj?)?lee?\d?):?': '@jonjlee',
         # matches: jvolkman, jvolkman_, jvolkman-work
-        r'j?volkman[\w_-]*:?': '@jvolkman',
+        r'(j?volkman[\w_-]*|cimmy):?': '@jvolkman',
         r'mblinn:?': '@NovusTiro',
         r'm?hawthorne:?': '@mhawthorne',
-        r'(mmattozzi_*|cimmy|sonofcim)_*:?': '@mikemattozzi',
+        r'(mmattozzi_*|sonofcim)_*:?': '@mikemattozzi',
         r'mschaffer:?': '@matschaffer',
         r'ohpauleez:?': '@ohpauleez',
         r'vfumo:?': '@neodem',
     }
+    
+    _rewrite_map.update(_blacklist_map)
     
     for b in _blacklist_regexes:
         _rewrite_map[b] = _blacklist_phrase
@@ -213,13 +220,16 @@ class Mixer(object):
             (soures, content) tuple
         """
         sources, raw_content = self.__mix_content(contents, **kw)
-        rewritten_content = self._mix_rewriter.rewrite(raw_content)
+        rewritten_content = self.rewrite(raw_content)
         
         if rewritten_content != raw_content:
             logging.info("rewriting '%s' -> '%s'" % (raw_content, rewritten_content))
             
         return sources, rewritten_content
-
+    
+    def rewrite(self, text):
+        return self._mix_rewriter.rewrite(text)
+        
     def __mix_content(self, contents, **kw):
         """
         returns:
