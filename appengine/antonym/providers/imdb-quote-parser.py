@@ -91,10 +91,12 @@ def iterate_quotes_character(content, names=()):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 2:
+    print sys.argv
+
+    if len(sys.argv) > 3:
         sys.stderr.write("ERROR - expected <s|c> [source_name_override]\n")
         sys.exit(1)
-    
+
     format = sys.argv.pop(1)
     source_name_override = sys.argv.pop(1) if len(sys.argv) == 2 else None
     writer = csv.writer(sys.stdout)
