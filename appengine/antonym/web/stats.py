@@ -14,7 +14,7 @@ from antonym.ttwitter import describe_status_with_timestamp, TwitterActor, Twitt
 
 class StatsHandler(webapp.RequestHandler):
     
-    def get(self):
+    def get(self, **kw):
         helper = RequestHelper(self)
         result = {}
         

@@ -45,14 +45,15 @@ class SafeTwitterActorHandler(webapp.RequestHandler):
     PATH = '/cron/twitter/act-safe'
     
     def post(self):
+        result = None
         try:
-            TwitterActor().act()
-            result = tuple()
+            result = TwitterActor().act()
         except Exception, e:
             msg = Exceptions.format_last()
             logging.error(msg)
             result = (e, msg)
             set_error_status(RequestHelper(self))
+        logging.info("result: %s" % result)
         return result
 
 

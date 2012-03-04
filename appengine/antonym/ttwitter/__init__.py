@@ -349,6 +349,7 @@ class TwitterActor(object):
                 # uses action parameter or selects one
                 if not action: action = self.__selector.select_action()
                 result.append(action)
+                logging.info("action: %s" % action)
                 if action == ActionSelector.RETWEET:
                     # is there anything to retweet?
                     retweet, summary = self.retweet()

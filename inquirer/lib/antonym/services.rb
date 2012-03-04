@@ -1,8 +1,5 @@
 require 'cgi'
 
-require 'rubygems'
-require 'json'
-
 
 module Antonym
   
@@ -40,16 +37,17 @@ module Antonym
     
     def self.new_client(config, args={})
       client = HTTPClient.new
-      type = args.fetch(:type, nil)
-      if type.nil?
-        type = :google
-      end
-      
-      if type == :google
+      auth_type = args.fetch(:type, config.auth_type)
+      raise Exception("missing auth_type") if auth_type.nil?
+
+      # temporary hack in attempt to force digest login
+      # if false
+      if auth_type == :google
         auth = Antonym::Authenticator.new(config.app_uri, config.app_name)
         auth.login_client(config.user, config.password, client, :admin => config.admin)
       else
-        uri = args.fetch(:uri, nil)
+        uri = args.fetch(:uri, config.app_uri)
+        puts "new_client #{uri} #{config.user} #{config.password}"
         client.set_auth(uri, config.user, config.password)
       end
       
@@ -106,7 +104,9 @@ module Antonym
     end
   
     def get(path, kw={})
+      puts "GenericService.get"
       client = authenticated_client(:listener => ServiceListener.new )
+      puts "client: #{client}"
       uri = "#{@config.app_uri}#{path}"
       response = client.get(uri)
       verify_response(response)

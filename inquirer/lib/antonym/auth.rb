@@ -1,8 +1,4 @@
-#require 'net/http'
 require 'cgi'
-
-require 'rubygems'
-require 'httpclient'
 
 
 module Antonym

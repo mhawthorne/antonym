@@ -108,7 +108,7 @@ class DigestAuth:
           - a tuple with header info (key, value) or None
           - and the username which was authenticated or None
         """
-        # logging.debug("authheader: %s" % authheader)
+        logging.debug("authheader: %s" % authheader)
         
         self.method = method
         # self.uri = uri
@@ -117,7 +117,7 @@ class DigestAuth:
             self.createAuthheaer()
             return self._returnTuple(401)
         self._parseHeader(authheader)
-        # logging.debug("params: %s" % self.params)
+        logging.info("params: %s" % self.params)
         if not len(self.params):
             return self._returnTuple(400)
         # Check for required parameters

@@ -24,6 +24,7 @@ from antonym.web.tweeter import TwitterActorHandler, TwitterApiHandler, TwitterD
     TwitterFollowersHandler, TwitterFriendsHandler, TwitterFriendHandler, TwitterMentionsHandler,\
     TwitterFriendsTimelineHandler, TwitterPublicTimelineHandler, TwitterResponseHandler, TwitterUserHandler
 
+# TODO: open/public naming seems inconsistent
 ALLOW_PUBLIC_WRITES = "allow_public_writes"
 ALLOW_OPEN_READS = "allow_public_reads"
 
