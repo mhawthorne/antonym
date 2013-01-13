@@ -159,10 +159,12 @@ class MixerTest(unittest.TestCase):
             'fancast', 'Fancast', 'fancast.com',
             'xfinity', 'Xfinity', 'xfinity.com',
             'thePlatform', 'theplatform', 'platform', 'the platform',
+            'streamsage', 'StreamSage',
             'xcal', 'excalibur', 'Excalibur', 'ccp', 'CCP',
             'mhorwitz', 'mhorwtiz', 'horwitz', 'bad dog', 'Bad Dog',
             'jason press', 'Jason Press', 'jpress',
             'amy banse', 'sam schwartz', 'bruce',
+            'mansnimar', 'arkady',
             'https://www.yammer.com/theplatform.com/nickrossi',
             'tp', 'tP', 'Tp', 'TP',
             # relax, I'm half black

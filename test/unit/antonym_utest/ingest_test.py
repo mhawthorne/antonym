@@ -42,8 +42,10 @@ class IngestTest(TestCase):
 
         # TODO: verify no HTML in stripped content
         # stripped content can be an empty string
+        
+        # not all posts have content, it appears
         self.assert_(stripped_content is not None, "missing: stripped_content")
-        self.assert_(raw_content, "missing: raw_content")
+        self.assert_(raw_content is not None, "missing: raw_content")
 
 
 if __name__ == '__main__':

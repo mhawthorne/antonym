@@ -30,9 +30,11 @@ class Mixer(object):
         r'#?[cC]omcast\S*', r'(#?cim|#?CIM)\S*',
         r'#?[fF]ancast\S*', 
         r'(the ?)?[pP]latform',
+        r'[sS]tream[sS]age',
         r'[xX]finity\S*',
         r'm?horw[itz]{3}', r'[bB]ad ?[dD]og', r'BD',
         r'[jJ]ason [pP]ress', r'jpress',
+        r'[mM]ansnimar', r'[aA]rkady',
         r'amy banse', r'sam schwartz', r'bruce',
         r'https?://www\.yammer\.com/\S+'
     ])
